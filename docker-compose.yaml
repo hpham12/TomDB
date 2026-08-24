@@ -1,0 +1,19 @@
+services:
+  tomdb:
+    image: hpham99/tomdb:latest
+    platform: linux/amd64
+    container_name: tomdb_container
+
+    cap_add:
+      - SYS_PTRACE
+
+    security_opt:
+      - seccomp:unconfined
+
+    tty: true
+    stdin_open: true
+
+    volumes:
+      - .:/workspace:rw
+
+    working_dir: /workspace
