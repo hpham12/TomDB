@@ -1,6 +1,5 @@
 #include <iostream>
-#include "testLib.h"
 
 int main() {
-    test();
+    return 0;
 }

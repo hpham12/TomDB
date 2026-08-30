@@ -11,7 +11,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Core database library
 add_library(tomdb_lib
-        src/testLib.cpp # TODO: Change as necessary
+        src/testLib.cpp
+        include/field.h
+        include/tuple.h
+        include/storage-manager.h
+        include/page.h
 )
 
 target_include_directories(tomdb_lib
@@ -23,6 +27,11 @@ target_include_directories(tomdb_lib
 add_executable(tomdb
         src/main.cpp
         src/testLib.cpp
+        include/field.h
+        include/tuple.h
+        include/storage-manager.h
+        include/page.h
+        include/constants.h
 )
 
 target_link_libraries(tomdb
@@ -33,6 +42,10 @@ target_link_libraries(tomdb
 # Tests
 add_executable(tomdb_tests
         test/main.cpp
+        include/field.h
+        include/tuple.h
+        include/storage-manager.h
+        include/page.h
 )
 
 target_link_libraries(tomdb_tests

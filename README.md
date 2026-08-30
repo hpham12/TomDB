@@ -40,5 +40,5 @@ Then, you can run Valgrind using the profiler option
 
   ![run-valgrind.png](assets/local-setup/run-valgrind.png)
 
-## High-Level Architecture!
+## High-Level Architecture
 ![High-level-architecture.png](assets/high-level-arch.png)
