@@ -14,8 +14,10 @@ add_library(tomdb_lib
         src/testLib.cpp
         include/field.h
         include/tuple.h
-        include/storage-manager.h
+        include/file_manager.h
         include/page.h
+        src/file_manager.cpp
+        include/storage_manager.h
 )
 
 target_include_directories(tomdb_lib
@@ -29,9 +31,12 @@ add_executable(tomdb
         src/testLib.cpp
         include/field.h
         include/tuple.h
-        include/storage-manager.h
+        include/file_manager.h
         include/page.h
         include/constants.h
+        src/file_manager.cpp
+        src/file_manager.cpp
+        include/storage_manager.h
 )
 
 target_link_libraries(tomdb
@@ -44,8 +49,10 @@ add_executable(tomdb_tests
         test/main.cpp
         include/field.h
         include/tuple.h
-        include/storage-manager.h
+        include/file_manager.h
         include/page.h
+        src/file_manager.cpp
+        include/storage_manager.h
 )
 
 target_link_libraries(tomdb_tests
