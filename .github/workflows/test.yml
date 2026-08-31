@@ -8,6 +8,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    container:
+      image: hpham99/tomdb:latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
