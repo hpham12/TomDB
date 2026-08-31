@@ -63,3 +63,10 @@ target_link_libraries(tomdb_tests
         tomdb_lib
         GTest::gtest_main
 )
+
+enable_testing()
+
+add_test(
+        NAME tomdb_tests
+        COMMAND tomdb_tests
+)
