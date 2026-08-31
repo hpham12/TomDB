@@ -42,6 +42,7 @@ target_include_directories(tomdb_lib
 
 add_executable(tomdb
         src/main.cpp
+        src/page.cpp
 )
 
 target_link_libraries(tomdb

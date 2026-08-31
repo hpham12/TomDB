@@ -10,16 +10,15 @@
 
 class Slot {
 public:
-    bool empty;
-    std::unique_ptr<Tuple> tuple;
-    size_t size;
+    bool empty;     // Does slot point to actual data?
+    size_t offset;  // Offset of the slot within the page
+    size_t size;    // Size of the slot
 
-    Slot();
+    Slot() : empty(true), offset(INVALID_VALUE), size(INVALID_VALUE) {}
 };
 
 class Page {
 public:
-    std::vector<std::unique_ptr<Slot>> slots;
     std::unique_ptr<char[]> pageData = std::make_unique<char[]>(PAGE_SIZE);
 
     Page();
