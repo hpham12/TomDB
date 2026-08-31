@@ -9,15 +9,26 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# --------------------
+# GoogleTest
+# --------------------
+
+include(FetchContent)
+
+FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+
+FetchContent_MakeAvailable(googletest)
+
+# --------------------
 # Core database library
+# --------------------
+
 add_library(tomdb_lib
         src/testLib.cpp
-        include/field.h
-        include/tuple.h
-        include/file_manager.h
-        include/page.h
         src/file_manager.cpp
-        include/storage_manager.h
 )
 
 target_include_directories(tomdb_lib
@@ -25,18 +36,12 @@ target_include_directories(tomdb_lib
         ${PROJECT_SOURCE_DIR}/include
 )
 
+# --------------------
 # Database executable
+# --------------------
+
 add_executable(tomdb
         src/main.cpp
-        src/testLib.cpp
-        include/field.h
-        include/tuple.h
-        include/file_manager.h
-        include/page.h
-        include/constants.h
-        src/file_manager.cpp
-        src/file_manager.cpp
-        include/storage_manager.h
 )
 
 target_link_libraries(tomdb
@@ -44,23 +49,16 @@ target_link_libraries(tomdb
         tomdb_lib
 )
 
+# --------------------
 # Tests
+# --------------------
+
 add_executable(tomdb_tests
-        test/main.cpp
-        include/field.h
-        include/tuple.h
-        include/file_manager.h
-        include/page.h
-        src/file_manager.cpp
-        include/storage_manager.h
+        test/hello_test.cpp
 )
 
 target_link_libraries(tomdb_tests
         PRIVATE
         tomdb_lib
-)
-
-target_include_directories(tomdb_tests
-        PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
+        GTest::gtest_main
 )
