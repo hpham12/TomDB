@@ -56,7 +56,6 @@ target_link_libraries(tomdb
 # --------------------
 
 add_executable(tomdb_tests
-        test/hello_test.cpp
         test/field_test.cpp
 )
 
