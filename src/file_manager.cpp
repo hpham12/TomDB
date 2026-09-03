@@ -18,7 +18,3 @@ FileManager::FileManager(const std::string &filePath) {
 
     this->numPages = fileSize / PAGE_SIZE;
 }
-
-Page FileManager::load(uint16_t pageId) {
-
-}

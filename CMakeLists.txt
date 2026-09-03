@@ -69,3 +69,22 @@ enable_testing()
 
 include(GoogleTest)
 gtest_discover_tests(tomdb_tests)
+
+# --------------------
+# Clang-Tidy
+# --------------------
+
+find_program(CLANG_TIDY clang-tidy REQUIRED)
+
+add_custom_target(tomdb_clang_tidy
+        COMMAND ${CLANG_TIDY}
+        ${PROJECT_SOURCE_DIR}/src/field.cpp
+        ${PROJECT_SOURCE_DIR}/src/file_manager.cpp
+        ${PROJECT_SOURCE_DIR}/src/page.cpp
+        --
+        -std=c++20
+        -I${PROJECT_SOURCE_DIR}/include
+
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMENT "Running clang-tidy"
+)
