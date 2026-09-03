@@ -68,7 +68,5 @@ target_link_libraries(tomdb_tests
 
 enable_testing()
 
-add_test(
-        NAME tomdb_tests
-        COMMAND tomdb_tests
-)
+include(GoogleTest)
+gtest_discover_tests(tomdb_tests)
