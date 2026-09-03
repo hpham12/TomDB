@@ -27,7 +27,7 @@ FetchContent_MakeAvailable(googletest)
 # --------------------
 
 add_library(tomdb_lib
-        src/testLib.cpp
+        src/field.cpp
         src/file_manager.cpp
 )
 
@@ -43,6 +43,7 @@ target_include_directories(tomdb_lib
 add_executable(tomdb
         src/main.cpp
         src/page.cpp
+        src/field.cpp
 )
 
 target_link_libraries(tomdb
@@ -56,6 +57,7 @@ target_link_libraries(tomdb
 
 add_executable(tomdb_tests
         test/hello_test.cpp
+        test/field_test.cpp
 )
 
 target_link_libraries(tomdb_tests

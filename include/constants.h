@@ -13,8 +13,11 @@
 
 using namespace std;
 
-inline constexpr size_t PAGE_SIZE = 4096;
+inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
 inline constexpr size_t INVALID_VALUE = numeric_limits<uint64_t>::max();
+
+// assuming average tuple size is ~40B
+inline constexpr size_t MAX_SLOTS = 100;
 
 #endif //TOMDB_CONSTANTS_H

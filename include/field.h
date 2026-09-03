@@ -4,9 +4,14 @@
 
 #ifndef TOMDB_FIELD_H
 #define TOMDB_FIELD_H
+#include <memory>
 #include <string>
 
-enum FieldType { INTEGER, FLOAT, STRING };
+enum FieldType {
+    INTEGER,    // 0
+    FLOAT,      // 1
+    STRING      // 2
+};
 
 class Field {
 public:
@@ -15,12 +20,14 @@ public:
     size_t size;
 
     // constructors
-    Field(int i);
-    Field(std::string s);
-    Field(float f);
+    explicit Field(int i);
 
-    static std::string serialize(Field &field);
-    static Field deserialize(std::ifstream &in);
+    explicit Field(const std::string& s);
+
+    explicit Field(float f);
+
+    std::string serialize() const;
+    static Field deserialize(std::istream &in);
 };
 
 #endif //TOMDB_FIELD_H
