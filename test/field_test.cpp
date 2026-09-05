@@ -32,10 +32,10 @@ TEST(FieldTest, IntFieldDeserialization) {
     std::stringstream stream;
     stream << field.serialize();
 
-    Field deserialized = Field::deserialize(stream);
-    EXPECT_EQ(field.type, FieldType::INTEGER);
-    EXPECT_EQ(field.size, sizeof(int));
-    EXPECT_EQ(*reinterpret_cast<int*>(field.value.get()), i);
+    auto deserialized = Field::deserialize(stream);
+    EXPECT_EQ(deserialized->type, FieldType::INTEGER);
+    EXPECT_EQ(deserialized->size, sizeof(int));
+    EXPECT_EQ(*reinterpret_cast<int*>(deserialized->value.get()), i);
 }
 
 TEST(FieldTest, FloatFieldInitialization) {
@@ -63,17 +63,17 @@ TEST(FieldTest, FloatFieldDeserialization) {
     std::stringstream stream;
     stream << field.serialize();
 
-    Field deserialized = Field::deserialize(stream);
-    EXPECT_EQ(field.type, FieldType::FLOAT);
-    EXPECT_EQ(field.size, sizeof(float));
-    EXPECT_EQ(*reinterpret_cast<float*>(field.value.get()), f);
+    auto deserialized = Field::deserialize(stream);
+    EXPECT_EQ(deserialized->type, FieldType::FLOAT);
+    EXPECT_EQ(deserialized->size, sizeof(float));
+    EXPECT_EQ(*reinterpret_cast<float*>(deserialized->value.get()), f);
 }
 
 TEST(FieldTest, StringFieldInitialization) {
     const std::string s = "Hello World";
     const Field field(s);
     EXPECT_EQ(field.type, FieldType::STRING);
-    EXPECT_EQ(field.size, s.length() + 1);
+    EXPECT_EQ(field.size, s.length());
     EXPECT_STREQ(field.value.get(), s.c_str());
 }
 
@@ -81,7 +81,7 @@ TEST(FieldTest, StringFieldSerialization) {
     const std::string s = "Hello World";
     const Field field(s);
     const std::string expected{
-        '2', ' ', '1', '2', ' ',
+        '2', ' ', '1', '1', ' ',
         'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
     };
     EXPECT_EQ(field.serialize(), expected);
@@ -93,8 +93,17 @@ TEST(FieldTest, StringFieldDeserialization) {
     std::stringstream stream;
     stream << field.serialize();
 
-    Field deserialized = Field::deserialize(stream);
-    EXPECT_EQ(field.type, FieldType::STRING);
-    EXPECT_EQ(field.size, s.length() + 1);
-    EXPECT_STREQ(field.value.get(), s.c_str());
+    auto deserialized = Field::deserialize(stream);
+    EXPECT_EQ(deserialized->type, FieldType::STRING);
+    EXPECT_EQ(deserialized->size, s.length());
+    EXPECT_STREQ(deserialized->value.get(), s.c_str());
+}
+
+TEST(FieldTest, Clone) {
+    const int i = 123456;
+    const Field field(i);
+    auto cloned = field.clone();
+    EXPECT_EQ(cloned->type, FieldType::INTEGER);
+    EXPECT_EQ(cloned->size, sizeof(int));
+    EXPECT_EQ(*reinterpret_cast<int*>(cloned->value.get()), i);
 }

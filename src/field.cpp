@@ -22,10 +22,10 @@ Field::Field(const float f) {
 
 Field::Field(const std::string &s) {
     type = STRING;
-    size = s.length() + 1;
-    value = std::make_unique<char[]>(size);
-    s.copy(value.get(), size - 1);
-    value.get()[size - 1] = '\0'; // add null terminator
+    size = s.length();
+    value = std::make_unique<char[]>(size + 1);
+    s.copy(value.get(), size);
+    value.get()[size] = '\0'; // add null terminator
 }
 
 /**
@@ -38,16 +38,13 @@ std::string Field::serialize() const {
 
     stream << type << ' ';
     stream << size << ' ';
-    if (type == STRING) {
-        stream.write(value.get(), static_cast<std::streamsize>(size) - 1);
-    } else {
-        stream.write(value.get(), static_cast<std::streamsize>(size));
-    }
+
+    stream.write(value.get(), static_cast<std::streamsize>(size));
 
     return stream.str();
 }
 
-Field Field::deserialize(std::istream &in) {
+std::unique_ptr<Field> Field::deserialize(std::istream &in) {
     int type;
     in >> type;
 
@@ -58,15 +55,33 @@ Field Field::deserialize(std::istream &in) {
 
     auto value = std::make_unique<char[]>(size);
 
+    in.seekg(1, std::ios::cur); // skip the white space
+
     in.read(value.get(), static_cast<std::streamsize>(size));
 
     if (fieldType == INTEGER) {
-        return Field(*reinterpret_cast<int*>(value.get()));
+        return std::make_unique<Field>(*reinterpret_cast<int*>(value.get()));
     }
 
     if (fieldType == FLOAT) {
-        return Field(*reinterpret_cast<float*>(value.get()));
+        return std::make_unique<Field>(*reinterpret_cast<float*>(value.get()));
     }
 
-    return Field(value.get());
+    return std::make_unique<Field>(value.get());
+}
+
+std::unique_ptr<Field> Field::clone() const {
+    if (type == STRING) {
+        return std::make_unique<Field>(value.get());
+    }
+
+    if (type == INTEGER) {
+        return std::make_unique<Field>(*reinterpret_cast<int*>(value.get()));
+    }
+
+    if (type == FLOAT) {
+        return std::make_unique<Field>(*reinterpret_cast<float*>(value.get()));
+    }
+
+    throw std::logic_error("No valid type found");
 }

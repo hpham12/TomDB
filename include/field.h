@@ -27,7 +27,8 @@ public:
     explicit Field(float f);
 
     std::string serialize() const;
-    static Field deserialize(std::istream &in);
+    static std::unique_ptr<Field> deserialize(std::istream &in);
+    std::unique_ptr<Field> clone() const;
 };
 
 #endif //TOMDB_FIELD_H

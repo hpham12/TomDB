@@ -14,9 +14,18 @@ private:
     std::vector<std::unique_ptr<Field>> fields;
 
 public:
-    static Tuple deserialize(std::ifstream &in);
-    static std::string serialize(Tuple tuple);
+    static std::unique_ptr<Tuple> deserialize(std::istream &in);
+
+    /**
+     * Serialize tuple with the following format:
+     *
+     * <code>[tupleSize] [serializedField1] [serializedField2]</code>
+     */
+    std::string serialize();
+
     size_t getSize();
+    void addField(std::unique_ptr<Field> &field);
+    std::unique_ptr<Field> getField(size_t index);
 };
 
 #endif //TOMDB_TUPLE_H
