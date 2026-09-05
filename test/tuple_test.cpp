@@ -54,10 +54,43 @@ TEST(TupleTest, Deserialize) {
     EXPECT_STREQ(stringField->value.get(), s.c_str());
 }
 
-// TEST(TupleTest, Serialize) {
-//
-// }
-//
+TEST(TupleTest, Serialize) {
+    Tuple tuple{};
+
+    int i = 123123123;
+    tuple.addField(std::make_unique<Field>(i));
+    std::string serializedIntField {
+        '0', ' ', '4', ' ',
+        '\xB3', '\xB5', '\x56', '\x07'
+    };
+
+    float f = 123.123;
+    tuple.addField(std::make_unique<Field>(f));
+    std::string serializedFloatField {
+        '1', ' ', '4', ' ',
+        '\xFA', '\x3E', '\xF6', '\x42'
+    };
+
+    std::string s = "Hello World";
+    tuple.addField(std::make_unique<Field>(s));
+    std::string serializedStringField{
+        '2', ' ', '1', '1', ' ',
+        'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
+    };
+
+    std::string serializedTupleSize{
+        '\x13', '\x00', '\x00', '\x00',
+        '\x00', '\x00', '\x00', '\x00', ' '
+    };
+
+    std::string expected =
+        serializedTupleSize + ' ' + serializedIntField
+        + ' ' + serializedFloatField + serializedStringField + ' ';
+
+    std::cout << tuple.serialize().size() << std::endl;
+    EXPECT_EQ(tuple.serialize(), expected);
+}
+
 // TEST(TupleTest, GetSize) {
 //
 // }

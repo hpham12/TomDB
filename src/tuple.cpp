@@ -5,8 +5,8 @@
 #include "tuple.h"
 #include <sstream>
 
-void Tuple::addField(std::unique_ptr<Field> &field) {
-    fields.push_back(std::move(field));
+void Tuple::addField(std::unique_ptr<Field> field) {
+    fields.push_back(field->clone());
 }
 
 size_t Tuple::getSize() {
@@ -24,8 +24,8 @@ std::string Tuple::serialize() {
     std::stringstream stream;
     stream << totalSize << ' ';
 
-    for (size_t i = 0; i < fields.size(); i++) {
-        stream << fields[i]->serialize();
+    for (const auto & field : fields) {
+        stream << field->serialize();
         stream << ' ';
     }
 
@@ -42,7 +42,7 @@ std::unique_ptr<Tuple> Tuple::deserialize(std::istream &in) {
     while (totalSize < tupleSize) {
         auto field = Field::deserialize(in);
         totalSize += field->size;
-        tuple->addField(field);
+        tuple->addField(field->clone());
     }
 
     return tuple;

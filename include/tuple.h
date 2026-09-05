@@ -24,7 +24,7 @@ public:
     std::string serialize();
 
     size_t getSize();
-    void addField(std::unique_ptr<Field> &field);
+    void addField(std::unique_ptr<Field> field);
     std::unique_ptr<Field> getField(size_t index);
 };
 

@@ -28,36 +28,26 @@ Field::Field(const std::string &s) {
     value.get()[size] = '\0'; // add null terminator
 }
 
-/**
- * Serialize field, with the format:
- *
- * <code>[fieldType] [fieldSize] [fieldData]</code>
- */
 std::string Field::serialize() const {
     std::stringstream stream;
 
-    stream << type << ' ';
-    stream << size << ' ';
-
-    stream.write(value.get(), static_cast<std::streamsize>(size));
+    stream.write(reinterpret_cast<const char*>(&type), sizeof(type));
+    stream.write(reinterpret_cast<const char*>(&size), sizeof(size));
+    stream.write(value.get(), size);
 
     return stream.str();
 }
 
 std::unique_ptr<Field> Field::deserialize(std::istream &in) {
-    int type;
-    in >> type;
+    FieldType fieldType;
+    in.read(reinterpret_cast<char*>(&fieldType), sizeof(fieldType));
 
-    auto fieldType = static_cast<FieldType>(type);
+    uint16_t fieldSize;
+    in.read(reinterpret_cast<char*>(&fieldSize), sizeof(fieldSize));
 
-    size_t size;
-    in >> size;
+    auto value = std::make_unique<char[]>(fieldSize);
 
-    auto value = std::make_unique<char[]>(size);
-
-    in.seekg(1, std::ios::cur); // skip the white space
-
-    in.read(value.get(), static_cast<std::streamsize>(size));
+    in.read(value.get(), fieldSize);
 
     if (fieldType == INTEGER) {
         return std::make_unique<Field>(*reinterpret_cast<int*>(value.get()));

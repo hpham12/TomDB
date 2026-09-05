@@ -17,7 +17,7 @@ class Field {
 public:
     FieldType type;
     std::unique_ptr<char[]> value;
-    size_t size;
+    uint16_t size;
 
     // constructors
     explicit Field(int i);
@@ -26,8 +26,15 @@ public:
 
     explicit Field(float f);
 
+    /**
+     * Serialize field (byte representation, little endian), with the following format:
+     *
+     * <code>[fieldType][fieldSize][fieldData]</code>
+     */
     std::string serialize() const;
+
     static std::unique_ptr<Field> deserialize(std::istream &in);
+
     std::unique_ptr<Field> clone() const;
 };
 

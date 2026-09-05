@@ -18,10 +18,10 @@ TEST(FieldTest, IntFieldInitialization) {
 TEST(FieldTest, IntFieldSerialization) {
     const int i = 123123123;
     const Field field(i);
-    const std::string expected{
-        '0', ' ', '4', ' ',
-        '\xB3', '\xB5', '\x56', '\x07'
-    };
+    const std::string serializedType {'\x00','\x00','\x00','\x00'};
+    const std::string serializedSize {'\x04', '\x00'};
+    const std::string serializedValue {'\xB3', '\xB5', '\x56', '\x07'};
+    const std::string expected = serializedType + serializedSize + serializedValue;
 
     EXPECT_EQ(field.serialize(), expected);
 }
@@ -43,16 +43,17 @@ TEST(FieldTest, FloatFieldInitialization) {
     const Field field(f);
     EXPECT_EQ(field.type, FieldType::FLOAT);
     EXPECT_EQ(field.size, sizeof(float));
-    EXPECT_EQ(*reinterpret_cast<float*>(field.value.get()), f);
+    EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(field.value.get()), f);
 }
 
 TEST(FieldTest, FlatFieldSerialization) {
     const float f = 123.123;
     const Field field(f);
-    const std::string expected{
-        '1', ' ', '4', ' ',
-        '\xFA', '\x3E', '\xF6', '\x42'
-    };
+
+    const std::string serializedType {'\x01','\x00','\x00','\x00'};
+    const std::string serializedSize {'\x04', '\x00'};
+    const std::string serializedValue {'\xFA', '\x3E', '\xF6', '\x42'};
+    const std::string expected = serializedType + serializedSize + serializedValue;
 
     EXPECT_EQ(field.serialize(), expected);
 }
@@ -66,7 +67,7 @@ TEST(FieldTest, FloatFieldDeserialization) {
     auto deserialized = Field::deserialize(stream);
     EXPECT_EQ(deserialized->type, FieldType::FLOAT);
     EXPECT_EQ(deserialized->size, sizeof(float));
-    EXPECT_EQ(*reinterpret_cast<float*>(deserialized->value.get()), f);
+    EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(deserialized->value.get()), f);
 }
 
 TEST(FieldTest, StringFieldInitialization) {
@@ -80,10 +81,10 @@ TEST(FieldTest, StringFieldInitialization) {
 TEST(FieldTest, StringFieldSerialization) {
     const std::string s = "Hello World";
     const Field field(s);
-    const std::string expected{
-        '2', ' ', '1', '1', ' ',
-        'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
-    };
+    const std::string serializedType {'\x02','\x00','\x00','\x00'};
+    const std::string serializedSize {'\x0B', '\x00'};
+    const std::string serializedValue {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
+    const std::string expected = serializedType + serializedSize + serializedValue;
     EXPECT_EQ(field.serialize(), expected);
 }
 
