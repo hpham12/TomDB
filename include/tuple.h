@@ -19,11 +19,13 @@ public:
     /**
      * Serialize tuple with the following format:
      *
-     * <code>[tupleSize] [serializedField1] [serializedField2]</code>
+     * <code>[tupleSize][serializedField1][serializedField2]</code>
+     *
+     * Note: <code>tupleSize</code> will be of type <code>uint32_t</code>
      */
     std::string serialize();
 
-    size_t getSize();
+    uint32_t getSize();
     void addField(std::unique_ptr<Field> field);
     std::unique_ptr<Field> getField(size_t index);
 };

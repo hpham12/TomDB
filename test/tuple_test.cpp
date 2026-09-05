@@ -19,17 +19,16 @@ TEST(TupleTest, Deserialize) {
     std::string s = "Hello World";
     fields.push_back(std::make_unique<Field>(s));
 
-    size_t totalSize = 0;
+    uint32_t totalSize = 0;
     for (auto &field : fields) {
         totalSize += field->size;
     }
 
     std::stringstream stream;
-    stream << totalSize << ' ';
+    stream.write(reinterpret_cast<const char*>(&totalSize), sizeof(totalSize));
 
     for (const auto & field : fields) {
         stream << field->serialize();
-        stream << ' ';
     }
 
     stream << "Other Data";
@@ -59,42 +58,69 @@ TEST(TupleTest, Serialize) {
 
     int i = 123123123;
     tuple.addField(std::make_unique<Field>(i));
-    std::string serializedIntField {
-        '0', ' ', '4', ' ',
-        '\xB3', '\xB5', '\x56', '\x07'
-    };
+    const std::string serializedIntType {'\x00','\x00','\x00','\x00'};
+    const std::string serializedIntSize {'\x04', '\x00'};
+    const std::string serializedIntValue {'\xB3', '\xB5', '\x56', '\x07'};
+    const std::string serializedIntField = serializedIntType + serializedIntSize + serializedIntValue;
 
     float f = 123.123;
     tuple.addField(std::make_unique<Field>(f));
-    std::string serializedFloatField {
-        '1', ' ', '4', ' ',
-        '\xFA', '\x3E', '\xF6', '\x42'
-    };
+
+    const std::string serializedFloatType {'\x01','\x00','\x00','\x00'};
+    const std::string serializedFloatSize {'\x04', '\x00'};
+    const std::string serializedFloatValue {'\xFA', '\x3E', '\xF6', '\x42'};
+    const std::string serializedFloatField = serializedFloatType + serializedFloatSize + serializedFloatValue;
 
     std::string s = "Hello World";
     tuple.addField(std::make_unique<Field>(s));
-    std::string serializedStringField{
-        '2', ' ', '1', '1', ' ',
-        'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
-    };
+    const std::string serializedStringType {'\x02','\x00','\x00','\x00'};
+    const std::string serializedStringSize {'\x0B', '\x00'};
+    const std::string serializedStringValue {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
+    const std::string serializedStringField = serializedStringType + serializedStringSize + serializedStringValue;
 
-    std::string serializedTupleSize{
-        '\x13', '\x00', '\x00', '\x00',
-        '\x00', '\x00', '\x00', '\x00', ' '
-    };
+    std::string serializedTupleSize{'\x13', '\x00', '\x00', '\x00'};
 
     std::string expected =
-        serializedTupleSize + ' ' + serializedIntField
-        + ' ' + serializedFloatField + serializedStringField + ' ';
+        serializedTupleSize + serializedIntField + serializedFloatField + serializedStringField;
 
-    std::cout << tuple.serialize().size() << std::endl;
     EXPECT_EQ(tuple.serialize(), expected);
 }
 
-// TEST(TupleTest, GetSize) {
-//
-// }
-//
-// TEST(TupleTest, AddField) {
-//
-// }
+TEST(TupleTest, GetSize) {
+    Tuple tuple{};
+
+    tuple.addField(std::make_unique<Field>(123123123));
+    tuple.addField(std::make_unique<Field>((float) 123.123));
+    tuple.addField(std::make_unique<Field>("Hello World"));
+
+    EXPECT_EQ(tuple.getSize(), 19);
+}
+
+TEST(TupleTest, GetField) {
+    Tuple tuple{};
+
+    tuple.addField(std::make_unique<Field>(123123123));
+    tuple.addField(std::make_unique<Field>((float) 123.123));
+    tuple.addField(std::make_unique<Field>("Hello World"));
+
+    auto field1 = tuple.getField(0);
+    EXPECT_EQ(field1->type, FieldType::INTEGER);
+    EXPECT_EQ(field1->size, sizeof(int));
+    EXPECT_EQ(*reinterpret_cast<int*>(field1->value.get()), 123123123);
+
+    auto field2 = tuple.getField(1);
+    EXPECT_EQ(field2->type, FieldType::FLOAT);
+    EXPECT_EQ(field2->size, sizeof(float));
+    EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(field2->value.get()), 123.123);
+
+    auto field3 = tuple.getField(2);
+    EXPECT_EQ(field3->type, FieldType::STRING);
+    EXPECT_EQ(field3->size, 11);
+    EXPECT_EQ(*reinterpret_cast<std::string*>(field3->value.get()), "Hello World");
+}
+
+TEST(TupleTest, GetFieldOutOfRange) {
+    Tuple tuple{};
+    tuple.addField(std::make_unique<Field>(123123123));
+    EXPECT_THROW(tuple.getField(3), std::out_of_range);
+}

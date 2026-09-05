@@ -46,7 +46,7 @@ TEST(FieldTest, FloatFieldInitialization) {
     EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(field.value.get()), f);
 }
 
-TEST(FieldTest, FlatFieldSerialization) {
+TEST(FieldTest, FloatFieldSerialization) {
     const float f = 123.123;
     const Field field(f);
 
