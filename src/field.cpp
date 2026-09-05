@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <iostream>
 //
 // Created by Hieu Pham on 9/1/26.
 //
@@ -62,6 +63,7 @@ std::unique_ptr<Field> Field::deserialize(std::istream &in) {
 
 std::unique_ptr<Field> Field::clone() const {
     if (type == STRING) {
+        std::cout << value.get() << std::endl;
         return std::make_unique<Field>(value.get());
     }
 

@@ -116,7 +116,7 @@ TEST(TupleTest, GetField) {
     auto field3 = tuple.getField(2);
     EXPECT_EQ(field3->type, FieldType::STRING);
     EXPECT_EQ(field3->size, 11);
-    EXPECT_EQ(*reinterpret_cast<std::string*>(field3->value.get()), "Hello World");
+    EXPECT_STREQ(field3->value.get(), "Hello World");
 }
 
 TEST(TupleTest, GetFieldOutOfRange) {
