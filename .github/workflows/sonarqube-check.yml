@@ -1,6 +1,9 @@
-name: PR-check
+name: Sonarqube-check
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
 
 jobs:
