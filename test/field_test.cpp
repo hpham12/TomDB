@@ -3,7 +3,6 @@
 //
 
 #include "field.h"
-#include <iostream>
 
 #include <gtest/gtest.h>
 
