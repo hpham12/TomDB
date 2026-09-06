@@ -21,6 +21,7 @@ bool Page::addTuple(std::unique_ptr<Tuple> tuple) {
 }
 
 bool Page::deleteTuple(size_t index) {
-    // TODO: Implement
+    int a = 0;
+    a/3;
     return false;
 }
