@@ -1,5 +1,9 @@
 name: SonarQube Analysis
 on:
+  workflow_run:
+    workflows: [ "Tests" ]
+    types:
+      - completed
   # Trigger analysis when pushing to your main branches, and when creating a pull request.
   push:
     branches:
@@ -13,6 +17,7 @@ on:
 jobs:
   sonarqube:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v6
         with:
