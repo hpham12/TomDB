@@ -10,6 +10,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # --------------------
+# Options
+# --------------------
+
+option(ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+
+# --------------------
 # GoogleTest
 # --------------------
 
@@ -38,6 +44,25 @@ target_include_directories(tomdb_lib
 )
 
 # --------------------
+# Coverage
+# --------------------
+
+if(ENABLE_COVERAGE)
+    message(STATUS "Code coverage enabled")
+
+    target_compile_options(tomdb_lib
+            PRIVATE
+            --coverage
+            -fprofile-abs-path
+    )
+
+    target_link_options(tomdb_lib
+            PRIVATE
+            --coverage
+    )
+endif()
+
+# --------------------
 # Database executable
 # --------------------
 
@@ -52,6 +77,13 @@ target_link_libraries(tomdb
         PRIVATE
         tomdb_lib
 )
+
+if(ENABLE_COVERAGE)
+    target_link_options(tomdb
+            PRIVATE
+            --coverage
+    )
+endif()
 
 # --------------------
 # Tests
@@ -68,10 +100,43 @@ target_link_libraries(tomdb_tests
         GTest::gtest_main
 )
 
+if(ENABLE_COVERAGE)
+    target_link_options(tomdb_tests
+            PRIVATE
+            --coverage
+    )
+endif()
+
 enable_testing()
 
 include(GoogleTest)
 gtest_discover_tests(tomdb_tests)
+
+# --------------------
+# Coverage report
+# --------------------
+
+if(ENABLE_COVERAGE)
+
+    find_program(GCOVR gcovr REQUIRED)
+
+    add_custom_target(coverage
+            COMMAND ${CMAKE_CTEST_COMMAND}
+            --output-on-failure
+
+            COMMAND ${GCOVR}
+            --root ${PROJECT_SOURCE_DIR}
+            --object-directory ${CMAKE_BINARY_DIR}
+            --sonarqube ${CMAKE_BINARY_DIR}/coverage.xml
+
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+
+            DEPENDS tomdb_tests
+
+            COMMENT "Running tests and generating SonarQube coverage report"
+    )
+
+endif()
 
 # --------------------
 # Clang-Tidy
