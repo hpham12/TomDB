@@ -1,7 +1,7 @@
-name: Tests
+name: PR-check
 
 on:
-  push:
+  pull_request:
 
 jobs:
   test:
