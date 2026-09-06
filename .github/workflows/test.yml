@@ -18,8 +18,5 @@ jobs:
       - name: Configure
         run: cmake -B build-coverage -DENABLE_COVERAGE=ON
 
-      - name: Build
+      - name: Build and Test
         run: cmake --build build-coverage --target coverage
-
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
