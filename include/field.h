@@ -36,6 +36,11 @@ public:
     static std::unique_ptr<Field> deserialize(std::istream &in);
 
     std::unique_ptr<Field> clone() const;
+
+    /**
+     * Total size (bytes) of the serialized field
+     */
+    uint32_t getSize() const;
 };
 
 #endif //TOMDB_FIELD_H

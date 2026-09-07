@@ -20,7 +20,7 @@ public:
 class Page {
 public:
     std::unique_ptr<char[]> pageData = std::make_unique<char[]>(PAGE_SIZE);
-    size_t metadata_size = sizeof(Slot);
+    size_t metadata_size = sizeof(Slot) * MAX_SLOTS;
 
     Page();
     bool addTuple(std::unique_ptr<Tuple> tuple);
