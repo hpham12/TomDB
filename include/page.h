@@ -23,7 +23,19 @@ public:
     size_t metadata_size = sizeof(Slot) * MAX_SLOTS;
 
     Page();
-    bool addTuple(std::unique_ptr<Tuple> tuple);
+
+    /**
+     * Add new tuple into slotted page
+     * @return the slot index in which the tuple was added, -1 if not added
+     */
+    size_t addTuple(std::unique_ptr<Tuple> tuple, char* reason);
+
+    /**
+     * Delete a tuple, given slot <code>index</code>
+     *
+     * @return <code>true</code> if deleted successfully,
+     * <code>false</code> otherwise
+     */
     bool deleteTuple(size_t index);
 };
 

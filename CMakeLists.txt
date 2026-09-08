@@ -35,6 +35,7 @@ FetchContent_MakeAvailable(googletest)
 add_library(tomdb_lib
         src/field.cpp
         src/tuple.cpp
+        src/page.cpp
         src/file_manager.cpp
 )
 
@@ -92,6 +93,7 @@ endif()
 add_executable(tomdb_tests
         test/field_test.cpp
         test/tuple_test.cpp
+        test/page_test.cpp
 )
 
 target_link_libraries(tomdb_tests
