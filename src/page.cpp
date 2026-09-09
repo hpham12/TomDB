@@ -40,7 +40,7 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
 
     size_t offset;
     if (slotIndex == 0) {
-        offset = 0;
+        offset = metadata_size;
     } else {
         offset = slots[slotIndex - 1].offset + slots[slotIndex - 1].size;
     }
@@ -56,7 +56,7 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
     slots[slotIndex].size = tupleSize;
     slots[slotIndex].empty = false;
 
-    memcpy(pageData.get() + offset + metadata_size, tuple->serialize().c_str(), tupleSize);
+    memcpy(pageData.get() + offset, tuple->serialize().c_str(), tupleSize);
 
     return slotIndex;
 }

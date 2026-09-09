@@ -4,6 +4,11 @@
 #include <gtest/gtest.h>
 #include "page.h"
 #include "tuple.h"
+#include <algorithm>
+
+std::unique_ptr<Tuple> createLargeTestTuple();
+std::unique_ptr<Tuple> createSmallTestTuple();
+
 
 TEST(PageTest, AddTuple) {
     Page page;
@@ -30,7 +35,7 @@ TEST(PageTest, AddTuple) {
     auto offset = slots[index].offset;
     std::stringstream stream;
 
-    stream.write(page.pageData.get() + offset + page.metadata_size, tupleSize);
+    stream.write(page.pageData.get() + offset, tupleSize);
 
     auto deserialized = Tuple::deserialize(stream);
     EXPECT_EQ(deserialized->getSize(), 41);
@@ -50,4 +55,69 @@ TEST(PageTest, AddTuple) {
     EXPECT_EQ(stringField->type, FieldType::STRING);
     EXPECT_EQ(stringField->size, s.length());
     EXPECT_STREQ(stringField->value.get(), s.c_str());
+}
+
+TEST(PageTest, AddTupleFailsWhenRunningOutOfSpace) {
+    Page page;
+    std::unique_ptr<char[]> failReason = std::make_unique<char[]>(512);
+    auto tupleSize = createLargeTestTuple()->getSize();
+    auto maxTuplesCanBeAdded = (PAGE_SIZE - page.metadata_size)/tupleSize;
+    for (size_t i = 0; i < maxTuplesCanBeAdded; i++) {
+        size_t insertedIndex = page.addTuple(createLargeTestTuple(), failReason.get());
+        ASSERT_EQ(insertedIndex, i);
+    }
+
+    // This one goes beyond the max slot limit
+    size_t insertedIndex = page.addTuple(createLargeTestTuple(), failReason.get());
+    ASSERT_EQ(insertedIndex, INVALID_VALUE);
+    ASSERT_STREQ("Tuple cannot fit in page", failReason.get());
+}
+
+TEST(PageTest, AddTupleFailsRunningOutOfSlots) {
+    Page page;
+    std::unique_ptr<char[]> failReason = std::make_unique<char[]>(512);
+    for (size_t i = 0; i < MAX_SLOTS; i++) {
+        size_t insertedIndex = page.addTuple(createSmallTestTuple(), failReason.get());
+        ASSERT_EQ(insertedIndex, i);
+    }
+
+    // This one goes beyond the max slot limit
+    size_t insertedIndex = page.addTuple(createSmallTestTuple(), failReason.get());
+    ASSERT_EQ(insertedIndex, INVALID_VALUE);
+    ASSERT_STREQ("No empty slot is large enough to hold tuple", failReason.get());
+}
+
+/**
+ * Create a large test tuple that consists of int, float, and string.
+ */
+std::unique_ptr<Tuple> createLargeTestTuple() {
+    Page page;
+    auto tuple = std::make_unique<Tuple>();
+
+    int i = 123456;
+    tuple->addField(std::make_unique<Field>(i));
+    tuple->addField(std::make_unique<Field>(i));
+
+    float f = 123.456;
+    tuple->addField(std::make_unique<Field>(f));
+    tuple->addField(std::make_unique<Field>(f));
+
+    std::string s = "Hello World";
+    tuple->addField(std::make_unique<Field>(s));
+    tuple->addField(std::make_unique<Field>(s));
+
+    return tuple;
+}
+
+/**
+ * Create a small test tuple that consists of int only
+ */
+std::unique_ptr<Tuple> createSmallTestTuple() {
+    Page page;
+    auto tuple = std::make_unique<Tuple>();
+
+    int i = 123456;
+    tuple->addField(std::make_unique<Field>(i));
+
+    return tuple;
 }
