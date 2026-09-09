@@ -19,6 +19,7 @@ TEST(PageTest, AddTuple) {
     tuple->addField(std::make_unique<Field>(s));
 
     char *reason = nullptr;
+    auto tupleSize = tuple->getSize();
 
     size_t index = page.addTuple(std::move(tuple), reason);
 
@@ -29,8 +30,7 @@ TEST(PageTest, AddTuple) {
     auto offset = slots[index].offset;
     std::stringstream stream;
 
-    stream.write(page.pageData.get() + offset, tuple->getSize());
-
+    stream.write(page.pageData.get() + offset + page.metadata_size, tupleSize);
 
     auto deserialized = Tuple::deserialize(stream);
     EXPECT_EQ(deserialized->getSize(), 41);

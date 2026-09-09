@@ -52,11 +52,11 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
         return INVALID_VALUE;
     }
 
-    slots[slotIndex - 1].offset = offset;
-    slots[slotIndex - 1].size = tupleSize;
-    slots[slotIndex - 1].empty = false;
+    slots[slotIndex].offset = offset;
+    slots[slotIndex].size = tupleSize;
+    slots[slotIndex].empty = false;
 
-    memcpy(pageData.get(), tuple->serialize().c_str(), tupleSize);
+    memcpy(pageData.get() + offset + metadata_size, tuple->serialize().c_str(), tupleSize);
 
     return slotIndex;
 }

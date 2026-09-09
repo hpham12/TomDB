@@ -21,7 +21,7 @@ TEST(TupleTest, Deserialize) {
 
     uint32_t totalSize = 0;
     for (auto &field : fields) {
-        totalSize += field->size;
+        totalSize += field->getSize();
     }
 
     std::stringstream stream;

@@ -38,11 +38,11 @@ std::unique_ptr<Tuple> Tuple::deserialize(std::istream &in) {
     in.read(reinterpret_cast<char*>(&tupleSize), sizeof(tupleSize));
     std::unique_ptr<Tuple> tuple = std::make_unique<Tuple>();
 
-    uint32_t totalSize = 0;
+    uint32_t totalSize = sizeof(tupleSize);
 
     while (totalSize < tupleSize) {
         auto field = Field::deserialize(in);
-        totalSize += field->size;
+        totalSize += field->getSize();
         tuple->addField(field->clone());
     }
 
