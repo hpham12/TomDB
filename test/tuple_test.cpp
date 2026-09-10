@@ -21,7 +21,7 @@ TEST(TupleTest, Deserialize) {
 
     uint32_t totalSize = 0;
     for (auto &field : fields) {
-        totalSize += field->size;
+        totalSize += field->getSize();
     }
 
     std::stringstream stream;
@@ -34,7 +34,7 @@ TEST(TupleTest, Deserialize) {
     stream << "Other Data";
 
     auto tuple = Tuple::deserialize(stream);
-    EXPECT_EQ(tuple->getSize(), totalSize);
+    EXPECT_EQ(tuple->getSize(), 41);
 
     auto intField = tuple->getField(0);
     auto floatField = tuple->getField(1);
@@ -78,7 +78,7 @@ TEST(TupleTest, Serialize) {
     const std::string serializedStringValue {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
     const std::string serializedStringField = serializedStringType + serializedStringSize + serializedStringValue;
 
-    std::string serializedTupleSize{'\x13', '\x00', '\x00', '\x00'};
+    std::string serializedTupleSize{'\x29', '\x00', '\x00', '\x00'};
 
     std::string expected =
         serializedTupleSize + serializedIntField + serializedFloatField + serializedStringField;
@@ -93,7 +93,9 @@ TEST(TupleTest, GetSize) {
     tuple.addField(std::make_unique<Field>((float) 123.123));
     tuple.addField(std::make_unique<Field>("Hello World"));
 
-    EXPECT_EQ(tuple.getSize(), 19);
+    // 37: total serialized tuple sizes
+    // 4: tuple size
+    EXPECT_EQ(tuple.getSize(), 37 + 4);
 }
 
 TEST(TupleTest, GetField) {

@@ -76,3 +76,7 @@ std::unique_ptr<Field> Field::clone() const {
 
     throw std::logic_error("No valid type found");
 }
+
+uint32_t Field::getSize() const {
+    return size + sizeof(size) + sizeof(type);
+}

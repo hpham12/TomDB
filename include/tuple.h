@@ -25,8 +25,13 @@ public:
      */
     std::string serialize();
 
+    /**
+     * Total size (bytes) of the serialized tuple
+     */
     uint32_t getSize();
+
     void addField(std::unique_ptr<Field> field);
+
     std::unique_ptr<Field> getField(size_t index);
 };
 

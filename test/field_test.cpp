@@ -37,6 +37,21 @@ TEST(FieldTest, IntFieldDeserialization) {
     EXPECT_EQ(*reinterpret_cast<int*>(deserialized->value.get()), i);
 }
 
+TEST(FieldTest, CloneIntField) {
+    const int i = 123456;
+    const Field field(i);
+    auto cloned = field.clone();
+    EXPECT_EQ(cloned->type, FieldType::INTEGER);
+    EXPECT_EQ(cloned->size, sizeof(int));
+    EXPECT_EQ(*reinterpret_cast<int*>(cloned->value.get()), i);
+}
+
+TEST(FieldTest, IntFieldGetSize) {
+    const int i = 123456;
+    const Field field(i);
+    EXPECT_EQ(field.getSize(), 4 + 2 + 4);
+}
+
 TEST(FieldTest, FloatFieldInitialization) {
     const float f = 123.123;
     const Field field(f);
@@ -69,6 +84,21 @@ TEST(FieldTest, FloatFieldDeserialization) {
     EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(deserialized->value.get()), f);
 }
 
+TEST(FieldTest, CloneFloatField) {
+    const float f = 123.456;
+    const Field field(f);
+    auto cloned = field.clone();
+    EXPECT_EQ(cloned->type, FieldType::FLOAT);
+    EXPECT_EQ(cloned->size, sizeof(float));
+    EXPECT_EQ(*reinterpret_cast<float*>(cloned->value.get()), f);
+}
+
+TEST(FieldTest, FloatFieldGetSize) {
+    const float f = 123.456;
+    const Field field(f);
+    EXPECT_EQ(field.getSize(), 4 + 2 + 4);
+}
+
 TEST(FieldTest, StringFieldInitialization) {
     const std::string s = "Hello World";
     const Field field(s);
@@ -99,24 +129,6 @@ TEST(FieldTest, StringFieldDeserialization) {
     EXPECT_STREQ(deserialized->value.get(), s.c_str());
 }
 
-TEST(FieldTest, CloneIntField) {
-    const int i = 123456;
-    const Field field(i);
-    auto cloned = field.clone();
-    EXPECT_EQ(cloned->type, FieldType::INTEGER);
-    EXPECT_EQ(cloned->size, sizeof(int));
-    EXPECT_EQ(*reinterpret_cast<int*>(cloned->value.get()), i);
-}
-
-TEST(FieldTest, CloneFloatField) {
-    const float f = 123.456;
-    const Field field(f);
-    auto cloned = field.clone();
-    EXPECT_EQ(cloned->type, FieldType::FLOAT);
-    EXPECT_EQ(cloned->size, sizeof(float));
-    EXPECT_EQ(*reinterpret_cast<float*>(cloned->value.get()), f);
-}
-
 TEST(FieldTest, CloneStringField) {
     const std::string s = "Hello World";
     const Field field(s);
@@ -124,4 +136,10 @@ TEST(FieldTest, CloneStringField) {
     EXPECT_EQ(cloned->type, FieldType::STRING);
     EXPECT_EQ(cloned->size, s.length());
     EXPECT_STREQ(cloned->value.get(), "Hello World");
+}
+
+TEST(FieldTest, StringFieldGetSize) {
+    const std::string s = "Hello World";
+    const Field field(s);
+    EXPECT_EQ(field.getSize(), s.length() + 2 + 4);
 }
