@@ -18,7 +18,7 @@ Page::Page() {
 }
 
 size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
-    Slot* slots = reinterpret_cast<Slot*>(pageData.get());
+    auto slots = reinterpret_cast<Slot*>(pageData.get());
     // Iterate through slots to find one that can potentially hold the new tuple
     bool foundSlot = false;
     size_t slotIndex = INVALID_VALUE;
@@ -70,7 +70,7 @@ bool Page::deleteTuple(size_t index) {
         return false;
     }
 
-    Slot* slots = reinterpret_cast<Slot*>(pageData.get());
+    auto slots = reinterpret_cast<Slot*>(pageData.get());
 
     if (slots[index].empty) {
         return false;
