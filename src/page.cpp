@@ -25,7 +25,7 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
     uint32_t tupleSize = tuple->getSize();
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
         auto slot = slots[i];
-        if (slot.empty && slots->size >= tupleSize) {
+        if (slot.empty && slot.size >= tupleSize) {
             foundSlot = true;
             slotIndex = i;
             break;
@@ -33,8 +33,10 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
     }
 
     if (!foundSlot) {
-        char failReason[] = "No empty slot is large enough to hold tuple";
-        memcpy(reason, failReason, sizeof(failReason));
+        if (reason != nullptr) {
+            char failReason[] = "No empty slot is large enough to hold tuple";
+            memcpy(reason, failReason, sizeof(failReason));
+        }
         return INVALID_VALUE;
     }
 
@@ -47,8 +49,10 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
 
     // next, check whether the slot can actually hold the tuple without overflowing the page
     if (offset + tupleSize > PAGE_SIZE) {
-        char failReason[] = "Tuple cannot fit in page";
-        memcpy(reason, failReason, sizeof(failReason));
+        if (reason != nullptr) {
+            char failReason[] = "Tuple cannot fit in page";
+            memcpy(reason, failReason, sizeof(failReason));
+        }
         return INVALID_VALUE;
     }
 

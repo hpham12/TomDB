@@ -26,7 +26,7 @@ public:
 
     /**
      * Add new tuple into slotted page
-     * @return the slot index in which the tuple was added, -1 if not added
+     * @return the slot index in which the tuple was added, <code>INVALID_VALUE</code> if not added
      */
     size_t addTuple(std::unique_ptr<Tuple> tuple, char* reason);
 
