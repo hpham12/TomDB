@@ -121,3 +121,32 @@ std::unique_ptr<Tuple> createSmallTestTuple() {
 
     return tuple;
 }
+
+TEST(PageTest, DeleteTuple) {
+    Page page;
+    std::unique_ptr<char[]> failReason = std::make_unique<char[]>(512);
+    for (size_t i = 0; i < 10; i++) {
+        page.addTuple(createSmallTestTuple(), failReason.get());
+    }
+
+    for (int8_t i = 9; i >= 0; i--) {
+        bool deleted = page.deleteTuple(i);
+        ASSERT_TRUE(deleted);
+    }
+
+    // verify that all slots are empty
+    Slot* slots = reinterpret_cast<Slot*>(page.pageData.get());
+    for (size_t i = 0; i < MAX_SLOTS; i++) {
+        ASSERT_TRUE(slots[i].empty);
+    }
+}
+
+TEST(PageTest, DeleteTupleFailsWhenIndexOutOfBound) {
+    Page page;
+    ASSERT_FALSE(page.deleteTuple(MAX_SLOTS + 1));
+}
+
+TEST(PageTest, DeleteTupleFailsWhenSlotIsEmpty) {
+    Page page;
+    ASSERT_FALSE(page.deleteTuple(0));
+}

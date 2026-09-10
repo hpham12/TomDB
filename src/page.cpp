@@ -62,6 +62,17 @@ size_t Page::addTuple(std::unique_ptr<Tuple> tuple, char* reason) {
 }
 
 bool Page::deleteTuple(size_t index) {
-    // TODO: Implement
-    return false;
+    if (index >= MAX_SLOTS) {
+        return false;
+    }
+
+    Slot* slots = reinterpret_cast<Slot*>(pageData.get());
+
+    if (slots[index].empty) {
+        return false;
+    }
+
+    slots[index].empty = true;
+
+    return true;
 }
