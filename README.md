@@ -6,6 +6,7 @@ It should not be used in any production system.
 - [Development Setup](#development-setup)
   - [MacOS - Apple Sillion](#macos---apple-silicon)
 - [High-Level Architecture](#high-level-architecture)
+- [Project Roadmap](#project-roadmap)
 
 ## Development Setup
 
@@ -42,3 +43,12 @@ Then, you can run Valgrind using the profiler option
 
 ## High-Level Architecture
 ![High-level-architecture.png](assets/high-level-arch.png)
+
+## Project Roadmap
+✅ Page, tuple, field
+✅ File-manager
+🚧 Storage manager
+⏳ Buffer manager
+⏳ B-tree indexing
+⏳ SQL/query parser and execution
+⏳ Transactions, recovery, concurrency
