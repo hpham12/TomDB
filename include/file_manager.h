@@ -15,7 +15,6 @@ class FileManager {
 private:
     size_t numPages = 0;
     std::fstream filestream;
-    std::string filePath;
 
 public:
     FileManager(const std::filesystem::path &filePath);

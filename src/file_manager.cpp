@@ -1,6 +1,5 @@
 #include "file_manager.h"
 
-#include <cstring>
 #include <filesystem>
 
 #include "constants.h"
@@ -52,7 +51,7 @@ std::unique_ptr<Page> FileManager::load(uint16_t pageId) {
 
     size_t offset = pageId * PAGE_SIZE;
     filestream.seekg(offset, std::ios::beg);
-    std::unique_ptr<Page> page = std::make_unique<Page>();
+    auto page = std::make_unique<Page>();
     filestream.read(page->pageData.get(), PAGE_SIZE);
 
     return page;
