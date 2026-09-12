@@ -94,6 +94,7 @@ add_executable(tomdb_tests
         test/field_test.cpp
         test/tuple_test.cpp
         test/page_test.cpp
+        test/file_manager.cpp
 )
 
 target_link_libraries(tomdb_tests
