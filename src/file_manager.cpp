@@ -32,7 +32,12 @@ FileManager::FileManager(std::filesystem::path &filePath) {
     }
 
     filestream.seekg(0, std::ios::end);
-    size_t fileSize = filestream.tellg();
+    std::streampos fileSize = filestream.tellg();
+
+    if (filestream.fail() || fileSize == std::streampos(-1)) {
+        std::cerr << "Could not determine file size for " << filePath << '\n';
+        exit(1);
+    }
 
     numPages = fileSize / PAGE_SIZE;
     if (numPages == 0) {
@@ -74,18 +79,15 @@ void FileManager::extend(size_t maxPageId) {
     }
 
     size_t numPagesToAdd = maxPageId - numPages + 1;
-    size_t bufferSize = numPagesToAdd * PAGE_SIZE;
-    char buffer[bufferSize];
 
     for (size_t i = 0; i < numPagesToAdd; i++) {
         Page newPage;
-        memcpy(buffer + (i * PAGE_SIZE), newPage.pageData.get(), PAGE_SIZE);
+        filestream.write(newPage.pageData.get(), PAGE_SIZE);
     }
 
     size_t pageOffset = numPages * PAGE_SIZE;
 
     filestream.seekp(pageOffset, std::ios::beg);
-    filestream.write(buffer, bufferSize);
     filestream.flush();
     numPages += numPagesToAdd;
 }

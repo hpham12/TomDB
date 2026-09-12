@@ -16,20 +16,14 @@ protected:
         std::mt19937 gen(rd());
         std::uniform_int_distribution distr(1, 10000);
         int randomNum = distr(gen);
-        filePath = "/data/tomdb/test" + std::to_string(randomNum) + ".data";
 
-        if (filePath.has_parent_path()) {
-            std::filesystem::create_directories(filePath.parent_path());
-        }
-
-        if (!std::filesystem::exists(filePath)) {
-            std::ofstream create(filePath);
-        }
+        filePath = std::filesystem::temp_directory_path() / ("tomdb_test" + std::to_string(randomNum) + ".data");
+        std::ofstream create(filePath);
     }
 
-    // void TearDown() override {
-    //     // Cleanup code here
-    // }
+    void TearDown() override {
+        std::filesystem::remove(filePath);
+    }
 
     std::filesystem::path filePath;
 };
@@ -79,7 +73,7 @@ TEST_F(FileManagerTest, LoadExistingPage) {
     FileManager fileManager(filePath);
     auto page = fileManager.load(0);
 
-    Slot* slot = reinterpret_cast<Slot*>(newPage.pageData.get());
+    Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
     ASSERT_EQ(slot->empty, false);
     ASSERT_EQ(slot->offset, 123);
     ASSERT_EQ(slot->size, 123456);
