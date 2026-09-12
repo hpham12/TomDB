@@ -6,18 +6,18 @@
 
 #include <iostream>
 
-StorageManager::StorageManager() {}
+StorageManager::StorageManager() = default;
 
-bool StorageManager::registerFileManager(std::string id, std::string filePath) {
-     if (fileManagers.contains(id)) {
+bool StorageManager::registerFileManager(const std::string& fileManagerId, const std::string& filePath) {
+     if (fileManagers.contains(fileManagerId)) {
           return false;
      }
 
-     fileManagers[id] = std::make_unique<FileManager>(filePath);
+     fileManagers[fileManagerId] = std::make_unique<FileManager>(filePath);
      return true;
 }
 
-std::unique_ptr<Page> StorageManager::getPage(PageID pageId) {
+std::unique_ptr<Page> StorageManager::getPage(const PageID& pageId) {
      if (!fileManagers.contains(pageId.fileManagerId)) {
           std::cerr << "ERROR: fileManager not registered" << std::endl;
           return nullptr;
@@ -48,9 +48,6 @@ void StorageManager::extend(const std::string &fileManagerId) {
      return fileManagers[fileManagerId]->extend();
 }
 
-/**
- * Extend file page up to <code>maxPageId</code>
- */
 void StorageManager::extend(const std::string &fileManagerId, size_t maxPageId) {
      if (!fileManagers.contains(fileManagerId)) {
           std::cerr << "ERROR: fileManager not registered" << std::endl;
@@ -59,13 +56,18 @@ void StorageManager::extend(const std::string &fileManagerId, size_t maxPageId) 
      return fileManagers[fileManagerId]->extend(maxPageId);
 }
 
-/**
- * Get the current number of pages of a file, given the <code>fileManagerId</code>
- */
 size_t StorageManager::getNumPages(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
           std::cerr << "ERROR: fileManager not registered" << std::endl;
      }
 
      return fileManagers[fileManagerId]->getNumPages();
+}
+
+std::unique_ptr<FileManager> &StorageManager::getFileManager(const std::string &fileManagerId) {
+     if (!fileManagers.contains(fileManagerId)) {
+          throw std::logic_error("FileManager not registered");
+     }
+
+     return fileManagers[fileManagerId];
 }

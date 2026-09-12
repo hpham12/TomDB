@@ -37,6 +37,7 @@ add_library(tomdb_lib
         src/tuple.cpp
         src/page.cpp
         src/file_manager.cpp
+        src/storage_manager.cpp
 )
 
 target_include_directories(tomdb_lib
@@ -68,11 +69,11 @@ endif()
 # --------------------
 
 add_executable(tomdb
-        src/main.cpp
         src/page.cpp
         src/field.cpp
         src/tuple.cpp
         src/storage_manager.cpp
+        src/file_manager.cpp
 )
 
 target_link_libraries(tomdb
@@ -95,7 +96,8 @@ add_executable(tomdb_tests
         test/field_test.cpp
         test/tuple_test.cpp
         test/page_test.cpp
-        test/file_manager.cpp
+        test/file_manager_test.cpp
+        test/storage_manager_test.cpp
 )
 
 target_link_libraries(tomdb_tests
@@ -151,8 +153,10 @@ find_program(CLANG_TIDY clang-tidy REQUIRED)
 add_custom_target(tomdb_clang_tidy
         COMMAND ${CLANG_TIDY}
         ${PROJECT_SOURCE_DIR}/src/field.cpp
+        ${PROJECT_SOURCE_DIR}/src/tuple.cpp
         ${PROJECT_SOURCE_DIR}/src/file_manager.cpp
         ${PROJECT_SOURCE_DIR}/src/page.cpp
+        ${PROJECT_SOURCE_DIR}/src/storage_manager.cpp
         --
         -std=c++20
         -I${PROJECT_SOURCE_DIR}/include

@@ -24,12 +24,12 @@ public:
     /**
      * Register a file manager, given its id and filePath
      */
-    bool registerFileManager(std::string id, std::string filePath);
+    bool registerFileManager(const std::string& fileManagerId, const std::string& filePath);
 
     /**
      * Get a page, using <code>PageID</code>
      */
-    std::unique_ptr<Page> getPage(PageID pageId);
+    std::unique_ptr<Page> getPage(const PageID& pageId);
 
     /**
      * Flush a page, given its <code>PageID</code> and content
@@ -51,6 +51,11 @@ public:
      * Get the current number of pages of a file, given the <code>fileManagerId</code>
      */
     size_t getNumPages(const std::string &fileManagerId);
+
+    /**
+     * Get the underlying <code>FileManager</code> given the <code>fileManagerId</code>
+     */
+    std::unique_ptr<FileManager> &getFileManager(const std::string &fileManagerId);
 };
 
 #endif //TOMDB_STORAGEMANAGER_H
