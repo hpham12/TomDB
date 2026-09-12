@@ -10,7 +10,7 @@
 //
 // Created by Hieu Pham on 8/30/26.
 //
-FileManager::FileManager(std::filesystem::path &filePath) {
+FileManager::FileManager(const std::filesystem::path &filePath) {
     try {
         // 1. Extract the directory portion and create it if missing
         if (filePath.has_parent_path()) {

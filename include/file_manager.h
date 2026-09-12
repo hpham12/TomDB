@@ -18,7 +18,7 @@ private:
     std::string filePath;
 
 public:
-    FileManager(std::filesystem::path &filePath);
+    FileManager(const std::filesystem::path &filePath);
 
     ~FileManager() {
         if (filestream.is_open()) {
