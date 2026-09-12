@@ -45,10 +45,10 @@ Then, you can run Valgrind using the profiler option
 ![High-level-architecture.png](assets/high-level-arch.png)
 
 ## Project Roadmap
-✅ Page, tuple, field
-✅ File-manager
-🚧 Storage manager
-⏳ Buffer manager
-⏳ B-tree indexing
-⏳ SQL/query parser and execution
-⏳ Transactions, recovery, concurrency
+✅ Page, tuple, field \
+✅ File-manager \
+🚧 Storage manager \
+⏳ Buffer manager \
+⏳ B-tree indexing \
+⏳ SQL/query parser and execution \
+⏳ Transactions, recovery, concurrency \
