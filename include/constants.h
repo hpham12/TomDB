@@ -4,14 +4,15 @@
 
 #ifndef TOMDB_CONSTANTS_H
 #define TOMDB_CONSTANTS_H
+#include <string>
 
 #include <cstdint>
 #include <limits>
 
-#define DATABASE_FILE_NAME "tomdb.data"
-#define INDEX_FILE_NAME "tomdb.index"
-
 using namespace std;
+
+inline constexpr string DATABASE_FILE_NAME = "tomdb.data";
+inline constexpr string INDEX_FILE_NAME = "tomdb.index";
 
 inline constexpr size_t PAGE_SIZE = 4096; // bytes
 

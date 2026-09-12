@@ -6,6 +6,7 @@
 #define TOMDB_FILE_MANAGER_H
 
 #include <fstream>
+#include <filesystem>
 
 #include "page.h"
 
@@ -13,21 +14,41 @@ class FileManager {
 
 private:
     size_t numPages = 0;
-    std::fstream file;
-    std::string filePath;
+    std::fstream filestream;
 
 public:
-    FileManager(const std::string &filePath);
+    FileManager(const std::filesystem::path &filePath);
 
     ~FileManager() {
-        if (file.is_open()) {
-            file.close();
+        if (filestream.is_open()) {
+            filestream.close();
         }
     }
 
-    Page load(uint16_t pageId);
+    /**
+     * load the page, given <code>pageId</code>
+     */
+    std::unique_ptr<Page> load(uint16_t pageId);
 
+    /**
+     * Flush the input <code>page</code>, given the <code>pageId</code>
+     */
     bool flush(uint16_t pageId, const Page &page);
+
+    /**
+     * Extend file by one page
+     *
+     */
+    void extend();
+
+    /**
+     * Extend file page up to <code>maxPageId</code>
+     */
+    void extend(size_t maxPageId);
+
+    size_t getNumPages() {
+        return numPages;
+    }
 };
 
 #endif //TOMDB_FILE_MANAGER_H
