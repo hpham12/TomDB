@@ -1,0 +1,46 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ] # Runs on pull requests targeting the main branch
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write # Required to post results back to the PR security tab
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Replace or add your project's languages here
+        # Supported: c-cpp, csharp, go, java-kotlin, javascript-typescript, python, ruby, swift
+        language: [ 'c-cpp' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Initializes the CodeQL tools for scanning
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Optional: 'security-extended' includes extra security and quality rules
+          queries: security-extended
+
+      # Autobuild attempts to compile languages like Java, C#, or C++.
+      # If your project uses only interpreted languages (Python/JS), you can remove this step.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # Analyzes the code and uploads the results to GitHub
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
