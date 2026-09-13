@@ -1,5 +1,5 @@
 # TomDB
-Tom DB is a relational database management system built for the purpose of learning about Database System implementation.
+Tom DB is a distributed relational database management system built for the purpose of learning about Database System implementation and Distributed System.
 It should not be used in any production system.
 
 ## Table of Contents
@@ -45,10 +45,23 @@ Then, you can run Valgrind using the profiler option
 ![High-level-architecture.png](assets/high-level-arch.png)
 
 ## Project Roadmap
-✅ Page, tuple, field \
-✅ File-manager \
-🚧 Storage manager \
-⏳ Buffer manager \
-⏳ B-tree indexing \
-⏳ SQL/query parser and execution \
-⏳ Transactions, recovery, concurrency \
+### Storage engine
+✅ Page, tuple, field
+✅ File manager
+🚧 Storage manager
+⏳ Buffer manager
+⏳ B-tree indexing
+
+### Query layer
+⏳ Query parser
+⏳ Query planner and execution engine
+
+### Reliability
+⏳ Transactions and concurrency control
+⏳ Write-ahead logging and crash recovery
+
+### Serving
+⏳ Database server and client protocol
+
+### Future exploration
+⏳ Distributed architecture
