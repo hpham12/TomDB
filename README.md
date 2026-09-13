@@ -46,22 +46,26 @@ Then, you can run Valgrind using the profiler option
 
 ## Project Roadmap
 ### Storage engine
-✅ Page, tuple, field
-✅ File manager
-🚧 Storage manager
-⏳ Buffer manager
-⏳ B-tree indexing
+✅ Page, tuple, field \
+✅ File manager \
+🚧 Storage manager \
+⏳ Buffer manager \
+⏳ B-tree indexing \
 
 ### Query layer
-⏳ Query parser
-⏳ Query planner and execution engine
+⏳ Query parser \
+⏳ Query planner and execution engine \
 
 ### Reliability
-⏳ Transactions and concurrency control
-⏳ Write-ahead logging and crash recovery
+⏳ Transactions and concurrency control \
+⏳ Write-ahead logging and crash recovery \
 
 ### Serving
-⏳ Database server and client protocol
+⏳ Database server and client protocol \
 
-### Future exploration
-⏳ Distributed architecture
+### Distributed architecture
+⏳ Partitioning and data placement \
+⏳ Replication and consensus \
+⏳ Distributed transactions / consistency model \
+⏳ Distributed query execution \
+⏳ Membership, failure detection, and rebalancing
