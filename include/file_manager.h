@@ -46,7 +46,7 @@ public:
      */
     void extend(size_t maxPageId);
 
-    size_t getNumPages() {
+    size_t getNumPages() const {
         return numPages;
     }
 };
