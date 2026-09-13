@@ -48,20 +48,20 @@ Then, you can run Valgrind using the profiler option
 ### Storage engine
 ✅ Page, tuple, field \
 ✅ File manager \
-🚧 Storage manager \
-⏳ Buffer manager \
-⏳ B-tree indexing \
+✅ Storage manager \
+🚧 Buffer manager \
+⏳ B-tree indexing
 
 ### Query layer
 ⏳ Query parser \
-⏳ Query planner and execution engine \
+⏳ Query planner and execution engine
 
 ### Reliability
 ⏳ Transactions and concurrency control \
-⏳ Write-ahead logging and crash recovery \
+⏳ Write-ahead logging and crash recovery
 
 ### Serving
-⏳ Database server and client protocol \
+⏳ Database server and client protocol
 
 ### Distributed architecture
 ⏳ Partitioning and data placement \
