@@ -74,6 +74,7 @@ add_executable(tomdb
         src/tuple.cpp
         src/storage_manager.cpp
         src/file_manager.cpp
+        src/main.cpp
 )
 
 target_link_libraries(tomdb
