@@ -8,7 +8,16 @@
 
 #include "gtest/gtest.h"
 
-// TODO: add file clean up after each test
+class StorageManagerTest : public testing::Test {
+protected:
+    void TearDown() override {
+        for (auto const &filePath : filePaths) {
+            std::filesystem::remove(filePath);
+        }
+    }
+
+    std::vector<std::string> filePaths;
+};
 
 std::string generateRandomFilePath() {
     std::random_device rd;
@@ -19,12 +28,20 @@ std::string generateRandomFilePath() {
     return std::filesystem::temp_directory_path() / ("tomdb_test" + std::to_string(randomNum) + ".data");
 }
 
-TEST(StorageManagerTest, RegisterFileManager) {
+TEST_F(StorageManagerTest, RegisterFileManager) {
     StorageManager storageManager;
 
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
-    ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
-    ASSERT_TRUE(storageManager.registerFileManager("fm3", generateRandomFilePath()));
+    auto randomFilePath1 = generateRandomFilePath();
+    auto randomFilePath2 = generateRandomFilePath();
+    auto randomFilePath3 = generateRandomFilePath();
+
+    filePaths.push_back(randomFilePath1);
+    filePaths.push_back(randomFilePath1);
+    filePaths.push_back(randomFilePath1);
+
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath1));
+    ASSERT_TRUE(storageManager.registerFileManager("fm2", randomFilePath2));
+    ASSERT_TRUE(storageManager.registerFileManager("fm3", randomFilePath3));
 
     ASSERT_EQ(storageManager.getNumPages("fm1"), 1);
     ASSERT_EQ(storageManager.getNumPages("fm2"), 1);
@@ -33,26 +50,33 @@ TEST(StorageManagerTest, RegisterFileManager) {
     ASSERT_FALSE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
 }
 
-TEST(StorageManagerTest, GetPage) {
+TEST_F(StorageManagerTest, GetPage) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
 
     ASSERT_NE(storageManager.getPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}), nullptr);
 }
 
-TEST(StorageManagerTest, GetPageWithFileManagerIdNotFound) {
+TEST_F(StorageManagerTest, GetPageWithFileManagerIdNotFound) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
 
-    ASSERT_THROW(storageManager.getPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}), std::logic_error);
+    ASSERT_TRUE(storageManager.registerFileManager("fm2", randomFilePath));
+
+    ASSERT_THROW(storageManager.getPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}), FileManagerNotRegisteredException);
 }
 
-TEST(StorageManagerTest, FlushPage) {
+TEST_F(StorageManagerTest, FlushPage) {
     StorageManager storageManager;
-    auto filePath = generateRandomFilePath();
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", filePath));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
 
-    std::fstream filestream(filePath, std::ios::out | std::ios::in);
+    std::fstream filestream(randomFilePath, std::ios::out | std::ios::in);
 
     Page page;
     Slot *slots = reinterpret_cast<Slot*>(page.pageData.get());
@@ -67,62 +91,82 @@ TEST(StorageManagerTest, FlushPage) {
 
     auto &fileManager = storageManager.getFileManager("fm1");
     auto updatedPage = fileManager->load(0);
-    auto *updatedSlots = reinterpret_cast<Slot*>(page.pageData.get());
+    auto *updatedSlots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
     updatedSlots[0].empty = false;
     updatedSlots[0].offset = 123;
     updatedSlots[0].size = 123456;
 }
 
-TEST(StorageManagerTest, FlushPageWhenFileManagerIdNotFound) {
+TEST_F(StorageManagerTest, FlushPageWhenFileManagerIdNotFound) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+    ASSERT_TRUE(storageManager.registerFileManager("fm2", randomFilePath));
 
     Page page;
-    ASSERT_THROW(storageManager.flushPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, page), std::logic_error);
+    ASSERT_THROW(storageManager.flushPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, page), FileManagerNotRegisteredException);
 }
 
-TEST(StorageManagerTest, ExtendPage) {
+TEST_F(StorageManagerTest, ExtendPage) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
 
     storageManager.extend("fm1");
     ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 2);
 }
 
-TEST(StorageManagerTest, ExtendPageWhenFileManagerIdNotFound) {
+TEST_F(StorageManagerTest, ExtendPageWhenFileManagerIdNotFound) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
 
-    ASSERT_THROW(storageManager.extend("fm1"), std::logic_error);
+    ASSERT_TRUE(storageManager.registerFileManager("fm2", randomFilePath));
+
+    ASSERT_THROW(storageManager.extend("fm1"), FileManagerNotRegisteredException);
     ASSERT_EQ(storageManager.getFileManager("fm2")->getNumPages(), 1);
 }
 
-TEST(StorageManagerTest, ExtendPageTilMax) {
+TEST_F(StorageManagerTest, ExtendPageTilMax) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
 
     storageManager.extend("fm1", 10);
     ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 11);
 }
 
-TEST(StorageManagerTest, ExtendPageTilMaxWhenFileManagerIdNotFound) {
+TEST_F(StorageManagerTest, ExtendPageTilMaxWhenFileManagerIdNotFound) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
 
-    ASSERT_THROW(storageManager.extend("fm2", 10), std::logic_error);
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
+
+    ASSERT_THROW(storageManager.extend("fm2", 10), FileManagerNotRegisteredException);
     ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 1);
 }
 
-TEST(StorageManagerTest, GetNumPages) {
+TEST_F(StorageManagerTest, GetNumPages) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
 
     ASSERT_EQ(storageManager.getNumPages("fm1"), 1);
 }
 
-TEST(StorageManagerTest, GetNumPagesWhenFileManagerIdNotFound) {
+TEST_F(StorageManagerTest, GetNumPagesWhenFileManagerIdNotFound) {
     StorageManager storageManager;
-    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
 
-    ASSERT_THROW(storageManager.getNumPages("fm2"), std::logic_error);
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath));
+
+    ASSERT_THROW(storageManager.getNumPages("fm2"), FileManagerNotRegisteredException);
 }

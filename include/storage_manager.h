@@ -6,6 +6,7 @@
 #define TOMDB_STORAGEMANAGER_H
 #include <string>
 #include <unordered_map>
+#include <stdexcept>
 
 #include "file_manager.h"
 
@@ -57,5 +58,15 @@ public:
      */
     std::unique_ptr<FileManager> &getFileManager(const std::string &fileManagerId);
 };
+
+class FileManagerNotRegisteredException : public std::runtime_error {
+public:
+    FileManagerNotRegisteredException(const std::string& message)
+        : std::runtime_error(message) {}
+
+    FileManagerNotRegisteredException()
+        : std::runtime_error("FileManager not registered") {}
+};
+
 
 #endif //TOMDB_STORAGEMANAGER_H

@@ -19,7 +19,7 @@ bool StorageManager::registerFileManager(const std::string& fileManagerId, const
 
 std::unique_ptr<Page> StorageManager::getPage(const PageID& pageId) {
      if (!fileManagers.contains(pageId.fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
      auto &fileManager = fileManagers[pageId.fileManagerId];
      return fileManager->load(pageId.fileManagerPageId);
@@ -30,7 +30,7 @@ bool StorageManager::flushPage(PageID pageId, Page &page) {
      auto fileManagerPageId = pageId.fileManagerPageId;
 
      if (!fileManagers.contains(fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
 
      auto &fileManager = fileManagers[fileManagerId];
@@ -40,7 +40,7 @@ bool StorageManager::flushPage(PageID pageId, Page &page) {
 
 void StorageManager::extend(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
 
      fileManagers[fileManagerId]->extend();
@@ -48,7 +48,7 @@ void StorageManager::extend(const std::string &fileManagerId) {
 
 void StorageManager::extend(const std::string &fileManagerId, size_t maxPageId) {
      if (!fileManagers.contains(fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
 
      fileManagers[fileManagerId]->extend(maxPageId);
@@ -56,7 +56,7 @@ void StorageManager::extend(const std::string &fileManagerId, size_t maxPageId) 
 
 size_t StorageManager::getNumPages(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
 
      return fileManagers[fileManagerId]->getNumPages();
@@ -64,7 +64,7 @@ size_t StorageManager::getNumPages(const std::string &fileManagerId) {
 
 std::unique_ptr<FileManager> &StorageManager::getFileManager(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
-          throw std::logic_error("FileManager not registered");
+          throw FileManagerNotRegisteredException();
      }
 
      return fileManagers[fileManagerId];

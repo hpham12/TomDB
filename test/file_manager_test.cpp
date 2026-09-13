@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <random>
 
-class FileManagerTest : public ::testing::Test {
+class FileManagerTest : public testing::Test {
 protected:
 
     void SetUp() override {
