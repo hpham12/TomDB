@@ -6,8 +6,14 @@
 #define TOMDB_STORAGEMANAGER_H
 #include <string>
 #include <unordered_map>
+#include <stdexcept>
 
 #include "file_manager.h"
+
+struct PageID {
+    std::string fileManagerId;
+    uint16_t fileManagerPageId;
+};
 
 class StorageManager {
 private:
@@ -16,11 +22,51 @@ private:
 public:
     StorageManager();
 
-    bool registerFileManager(std::string id, std::unique_ptr<FileManager> fileManager);
+    /**
+     * Register a file manager, given its id and filePath
+     */
+    bool registerFileManager(const std::string& fileManagerId, const std::string& filePath);
 
-    Page getPage(std::string fileManagerId, uint16_t pageId);
+    /**
+     * Get a page, using <code>PageID</code>
+     */
+    std::unique_ptr<Page> getPage(const PageID& pageId);
 
-    bool flushPage(std::string fileManagerId, uint16_t pageId);
+    /**
+     * Flush a page, given its <code>PageID</code> and content
+     */
+    bool flushPage(PageID pageId, Page &page);
+
+    /**
+     * Extend file by one page, given the <code>fileManagerId</code>
+     *
+     */
+    void extend(const std::string &fileManagerId);
+
+    /**
+     * Extend file page up to <code>maxPageId</code>
+     */
+    void extend(const std::string &fileManagerId, size_t maxPageId);
+
+    /**
+     * Get the current number of pages of a file, given the <code>fileManagerId</code>
+     */
+    size_t getNumPages(const std::string &fileManagerId);
+
+    /**
+     * Get the underlying <code>FileManager</code> given the <code>fileManagerId</code>
+     */
+    std::unique_ptr<FileManager> &getFileManager(const std::string &fileManagerId);
 };
+
+class FileManagerNotRegisteredException : public std::runtime_error {
+public:
+    FileManagerNotRegisteredException(const std::string& message)
+        : std::runtime_error(message) {}
+
+    FileManagerNotRegisteredException()
+        : std::runtime_error("FileManager not registered") {}
+};
+
 
 #endif //TOMDB_STORAGEMANAGER_H
