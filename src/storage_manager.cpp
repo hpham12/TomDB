@@ -19,8 +19,7 @@ bool StorageManager::registerFileManager(const std::string& fileManagerId, const
 
 std::unique_ptr<Page> StorageManager::getPage(const PageID& pageId) {
      if (!fileManagers.contains(pageId.fileManagerId)) {
-          std::cerr << "ERROR: fileManager not registered" << std::endl;
-          return nullptr;
+          throw std::logic_error("FileManager not registered");
      }
      auto &fileManager = fileManagers[pageId.fileManagerId];
      return fileManager->load(pageId.fileManagerPageId);
@@ -31,8 +30,7 @@ bool StorageManager::flushPage(PageID pageId, Page &page) {
      auto fileManagerPageId = pageId.fileManagerPageId;
 
      if (!fileManagers.contains(fileManagerId)) {
-          std::cerr << "ERROR: fileManager not registered" << std::endl;
-          return false;
+          throw std::logic_error("FileManager not registered");
      }
 
      auto &fileManager = fileManagers[fileManagerId];
@@ -42,23 +40,23 @@ bool StorageManager::flushPage(PageID pageId, Page &page) {
 
 void StorageManager::extend(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
-          std::cerr << "ERROR: fileManager not registered" << std::endl;
+          throw std::logic_error("FileManager not registered");
      }
 
-     return fileManagers[fileManagerId]->extend();
+     fileManagers[fileManagerId]->extend();
 }
 
 void StorageManager::extend(const std::string &fileManagerId, size_t maxPageId) {
      if (!fileManagers.contains(fileManagerId)) {
-          std::cerr << "ERROR: fileManager not registered" << std::endl;
+          throw std::logic_error("FileManager not registered");
      }
 
-     return fileManagers[fileManagerId]->extend(maxPageId);
+     fileManagers[fileManagerId]->extend(maxPageId);
 }
 
 size_t StorageManager::getNumPages(const std::string &fileManagerId) {
      if (!fileManagers.contains(fileManagerId)) {
-          std::cerr << "ERROR: fileManager not registered" << std::endl;
+          throw std::logic_error("FileManager not registered");
      }
 
      return fileManagers[fileManagerId]->getNumPages();

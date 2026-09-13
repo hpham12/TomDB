@@ -44,7 +44,7 @@ TEST(StorageManagerTest, GetPageWithFileManagerIdNotFound) {
     StorageManager storageManager;
     ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
 
-    ASSERT_EQ(storageManager.getPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}), nullptr);
+    ASSERT_THROW(storageManager.getPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}), std::logic_error);
 }
 
 TEST(StorageManagerTest, FlushPage) {
@@ -78,5 +78,51 @@ TEST(StorageManagerTest, FlushPageWhenFileManagerIdNotFound) {
     ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
 
     Page page;
-    ASSERT_FALSE(storageManager.flushPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, page));
+    ASSERT_THROW(storageManager.flushPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, page), std::logic_error);
+}
+
+TEST(StorageManagerTest, ExtendPage) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+
+    storageManager.extend("fm1");
+    ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 2);
+}
+
+TEST(StorageManagerTest, ExtendPageWhenFileManagerIdNotFound) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm2", generateRandomFilePath()));
+
+    ASSERT_THROW(storageManager.extend("fm1"), std::logic_error);
+    ASSERT_EQ(storageManager.getFileManager("fm2")->getNumPages(), 1);
+}
+
+TEST(StorageManagerTest, ExtendPageTilMax) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+
+    storageManager.extend("fm1", 10);
+    ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 11);
+}
+
+TEST(StorageManagerTest, ExtendPageTilMaxWhenFileManagerIdNotFound) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+
+    ASSERT_THROW(storageManager.extend("fm2", 10), std::logic_error);
+    ASSERT_EQ(storageManager.getFileManager("fm1")->getNumPages(), 1);
+}
+
+TEST(StorageManagerTest, GetNumPages) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+
+    ASSERT_EQ(storageManager.getNumPages("fm1"), 1);
+}
+
+TEST(StorageManagerTest, GetNumPagesWhenFileManagerIdNotFound) {
+    StorageManager storageManager;
+    ASSERT_TRUE(storageManager.registerFileManager("fm1", generateRandomFilePath()));
+
+    ASSERT_THROW(storageManager.getNumPages("fm2"), std::logic_error);
 }
