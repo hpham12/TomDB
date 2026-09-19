@@ -1,4 +1,4 @@
-#include "field.h"
+#include "../../include/records/field.h"
 
 #include <cstring>
 #include <sstream>
@@ -58,7 +58,7 @@ std::unique_ptr<Field> Field::deserialize(std::istream &in) {
         return std::make_unique<Field>(*reinterpret_cast<float*>(value.get()));
     }
 
-    return std::make_unique<Field>(value.get());
+    return std::make_unique<Field>(std::string(value.get(), fieldSize));
 }
 
 std::unique_ptr<Field> Field::clone() const {
