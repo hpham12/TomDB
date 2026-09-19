@@ -87,12 +87,12 @@ void TwoQPolicy::evictPage(PageID pageId) noexcept(false) {
     }
 
     if (foundInFIFO) {
-        // promote to LRU
         this->fifo.erase(fifo.begin() + fifoIndex);
     }
 }
 
 PageID TwoQPolicy::selectPageToEvict(const std::unordered_set<PageID> &pinnedPages) noexcept(false) {
+    std::lock_guard lock(this->mutex);
     PageID removedPageId = INVALID_PAGE_ID;
 
     bool foundEvictVictimInFIFO = false;
