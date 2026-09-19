@@ -1,3 +1,6 @@
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=coverage)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=coverage)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=reliability_rating)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=reliability_rating)
+
 # TomDB
 Tom DB is a distributed relational database management system built for the purpose of learning about Database System implementation and Distributed System.
 It should not be used in any production system.
