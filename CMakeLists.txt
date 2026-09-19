@@ -33,11 +33,11 @@ FetchContent_MakeAvailable(googletest)
 # --------------------
 
 add_library(tomdb_lib
-        src/field.cpp
-        src/tuple.cpp
-        src/page.cpp
-        src/file_manager.cpp
-        src/storage_manager.cpp
+        src/records/field.cpp
+        src/records/tuple.cpp
+        src/records/page.cpp
+        src/storage/file_manager.cpp
+        src/storage/storage_manager.cpp
         src/buffer/two_q_policy.cpp
 )
 
@@ -70,11 +70,11 @@ endif()
 # --------------------
 
 add_executable(tomdb
-        src/page.cpp
-        src/field.cpp
-        src/tuple.cpp
-        src/storage_manager.cpp
-        src/file_manager.cpp
+        src/records/page.cpp
+        src/records/field.cpp
+        src/records/tuple.cpp
+        src/storage/storage_manager.cpp
+        src/storage/file_manager.cpp
         src/main.cpp
         include/buffer/buffer_manager.h
         include/buffer/policy.h
@@ -100,11 +100,11 @@ endif()
 # --------------------
 
 add_executable(tomdb_tests
-        test/field_test.cpp
-        test/tuple_test.cpp
-        test/page_test.cpp
-        test/file_manager_test.cpp
-        test/storage_manager_test.cpp
+        test/records/field_test.cpp
+        test/records/tuple_test.cpp
+        test/records/page_test.cpp
+        test/storage/file_manager_test.cpp
+        test/storage/storage_manager_test.cpp
         test/buffer/two_q_policy_test.cpp
 )
 
@@ -160,11 +160,11 @@ find_program(CLANG_TIDY clang-tidy REQUIRED)
 
 add_custom_target(tomdb_clang_tidy
         COMMAND ${CLANG_TIDY}
-        ${PROJECT_SOURCE_DIR}/src/field.cpp
-        ${PROJECT_SOURCE_DIR}/src/tuple.cpp
-        ${PROJECT_SOURCE_DIR}/src/file_manager.cpp
-        ${PROJECT_SOURCE_DIR}/src/page.cpp
-        ${PROJECT_SOURCE_DIR}/src/storage_manager.cpp
+        src/records/field.cpp
+        src/records/tuple.cpp
+        src/storage/file_manager.cpp
+        src/records/page.cpp
+        src/storage/storage_manager.cpp
         --
         -std=c++20
         -I${PROJECT_SOURCE_DIR}/include

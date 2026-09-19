@@ -1,8 +1,8 @@
 //
 // Created by Hieu Pham on 9/5/26.
 //
-#include "tuple.h"
-#include "field.h"
+#include "records/tuple.h"
+#include "records/field.h"
 #include <iostream>
 
 #include <gtest/gtest.h>

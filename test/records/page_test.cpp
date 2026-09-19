@@ -2,8 +2,8 @@
 // Created by Hieu Pham on 9/7/26.
 //
 #include <gtest/gtest.h>
-#include "page.h"
-#include "tuple.h"
+#include "records/page.h"
+#include "records/tuple.h"
 #include <algorithm>
 
 std::unique_ptr<Tuple> createLargeTestTuple();
