@@ -11,9 +11,9 @@
 class Policy {
 public:
     virtual ~Policy() = default;
-    virtual void evictPage(PageID pageId) noexcept(false);
-    virtual void accessPage(PageID pageId) noexcept(false);
-    virtual PageID selectPageToEvict(std::set<PageID> pageIds) noexcept(false);
+    virtual void evictPage(PageID pageId) noexcept(false) = 0;
+    virtual void accessPage(PageID pageId) noexcept(false) = 0;
+    virtual PageID selectPageToEvict(const unordered_set<PageID> &pageIds) noexcept(false) = 0;
 };
 
 #endif //TOMDB_POLICY_H

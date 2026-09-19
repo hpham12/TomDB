@@ -134,3 +134,23 @@ PageID TwoQPolicy::selectPageToEvict(const std::unordered_set<PageID> &pinnedPag
 
     return INVALID_PAGE_ID;
 }
+
+bool TwoQPolicy::isInFifo(PageID pageId) const {
+    for (auto const &pid : fifo) {
+        if (pageId == pid) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool TwoQPolicy::isInLru(PageID pageId) const {
+    for (auto const &pid : lru) {
+        if (pageId == pid) {
+            return true;
+        }
+    }
+
+    return false;
+}
