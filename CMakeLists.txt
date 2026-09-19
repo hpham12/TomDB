@@ -75,6 +75,11 @@ add_executable(tomdb
         src/storage_manager.cpp
         src/file_manager.cpp
         src/main.cpp
+        include/buffer/buffer_manager.h
+        include/buffer/Policy.h
+        include/buffer/two_q_policy.h
+        src/buffer/two_q_policy.cpp
+        src/buffer/buffer_manager.cpp
 )
 
 target_link_libraries(tomdb

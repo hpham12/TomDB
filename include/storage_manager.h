@@ -10,13 +10,7 @@
 
 #include "file_manager.h"
 
-struct PageID {
-    std::string fileManagerId;
-    uint16_t fileManagerPageId;
-};
-
 class StorageManager {
-private:
     std::unordered_map<std::string, std::unique_ptr<FileManager>> fileManagers;
 
 public:
