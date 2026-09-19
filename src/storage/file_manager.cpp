@@ -79,14 +79,15 @@ void FileManager::extend(size_t maxPageId) {
 
     size_t numPagesToAdd = maxPageId - numPages + 1;
 
+    size_t pageOffset = numPages * PAGE_SIZE;
+
+    filestream.seekp(pageOffset, std::ios::beg);
+
     for (size_t i = 0; i < numPagesToAdd; i++) {
         Page newPage;
         filestream.write(newPage.pageData.get(), PAGE_SIZE);
     }
-
-    size_t pageOffset = numPages * PAGE_SIZE;
-
-    filestream.seekp(pageOffset, std::ios::beg);
+    
     filestream.flush();
     numPages += numPagesToAdd;
 }
