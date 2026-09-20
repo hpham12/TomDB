@@ -2,8 +2,8 @@
 // Created by Hieu Pham on 8/30/26.
 //
 
-#ifndef TOMDB_CONSTANTS_H
-#define TOMDB_CONSTANTS_H
+#ifndef TOMDB_COMMONS_H
+#define TOMDB_COMMONS_H
 #include <string>
 
 #include <cstdint>
@@ -55,4 +55,4 @@ enum LockMode {
 
 inline constexpr size_t MAX_CACHED_PAGES = 15;
 
-#endif //TOMDB_CONSTANTS_H
+#endif //TOMDB_COMMONS_H

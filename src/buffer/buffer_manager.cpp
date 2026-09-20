@@ -4,14 +4,73 @@
 
 #include "buffer/buffer_manager.h"
 
-void BufferManager::pinPage(PageID pageId, LockMode lockMode) {
+#include <functional>
 
+BufferManager::BufferManager() {
+    for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
+        bufferPool.emplace_back(std::make_unique<BufferFrame>());
+        availableFrames.insert(static_cast<FrameID>(i));
+    }
+}
+
+std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode lockMode) noexcept(false) {
+    if (pinnedPages.contains(pageId)) {
+        policy->accessPage(pageId);
+        auto frameId = pageToFrameMapping[pageId];
+        auto &frame = bufferPool.at(frameId);
+        return frame->page;
+    }
+
+    if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
+        storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
+    }
+
+    if (policy->isCacheFull()) {
+        auto pageToEvict = policy->selectPageToEvict(pinnedPages);
+        auto frameId = pageToFrameMapping[pageToEvict];
+        auto &frame = bufferPool.at(frameId);
+        if (frame->isDirty) {
+            flushPage(pageId);
+        }
+        availableFrames.insert(frameId);
+    }
+
+    // find an available frame
+    if (availableFrames.empty()) {
+        throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
+    }
+
+    const auto availableFrameId = *availableFrames.begin();
+
+    std::unique_ptr<Page> page = storageManager->getPage(pageId);
+
+    policy->accessPage(pageId);
+    bufferPool[availableFrameId]->isDirty = false;
+    bufferPool[availableFrameId]->frameId = availableFrameId;
+    bufferPool[availableFrameId]->pageId = pageId;
+    bufferPool[availableFrameId]->page = std::move(page);
+    pageToFrameMapping[pageId] = availableFrameId;
+    availableFrames.erase(availableFrameId);
+
+    return bufferPool[availableFrameId]->page;
 }
 
 void BufferManager::unpinPage(PageID pageId) {
-
+    // TODO: Implement
 }
 
-size_t BufferManager::getNumPages(std::string &fileManagerId) {
-    return 0;
+size_t BufferManager::getNumPages(const std::string& fileManagerId) const {
+    return storageManager->getNumPages(fileManagerId);
+}
+
+void BufferManager::flushPage(PageID pageId) {
+    // TODO: Implement
+}
+
+void BufferManager::evictPage(PageID pageId) {
+    // TODO: Implement
+}
+
+void BufferManager::registerFileManager(const std::string &fileManagerId, const std::string &filePath) const {
+    storageManager->registerFileManager(fileManagerId, filePath);
 }

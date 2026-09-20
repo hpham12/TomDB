@@ -38,7 +38,8 @@ add_library(tomdb_lib
         src/records/page.cpp
         src/storage/file_manager.cpp
         src/storage/storage_manager.cpp
-        src/buffer/two_q_policy.cpp
+        src/buffer/two_queue_policy.cpp
+        src/buffer/buffer_manager.cpp
 )
 
 target_include_directories(tomdb_lib
@@ -76,10 +77,7 @@ add_executable(tomdb
         src/storage/storage_manager.cpp
         src/storage/file_manager.cpp
         src/main.cpp
-        include/buffer/buffer_manager.h
-        include/buffer/policy.h
-        include/buffer/two_q_policy.h
-        src/buffer/two_q_policy.cpp
+        src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
 )
 
@@ -105,7 +103,9 @@ add_executable(tomdb_tests
         test/records/page_test.cpp
         test/storage/file_manager_test.cpp
         test/storage/storage_manager_test.cpp
-        test/buffer/two_q_policy_test.cpp
+        test/buffer/two_queue_policy_test.cpp
+        test/buffer/buffer_manager_test.cpp
+        test/test_utils.h
 )
 
 target_link_libraries(tomdb_tests

@@ -2,7 +2,7 @@
 // Created by Hieu Pham on 9/19/26.
 //
 
-#include "buffer/two_q_policy.h"
+#include "buffer/two_queue_policy.h"
 
 #include <unordered_set>
 
@@ -153,4 +153,8 @@ bool TwoQPolicy::isInLru(PageID pageId) const {
     }
 
     return false;
+}
+
+bool TwoQPolicy::isCacheFull() const noexcept {
+    return lru.size() + fifo.size() >= MAX_CACHED_PAGES;
 }

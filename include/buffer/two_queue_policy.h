@@ -29,9 +29,11 @@ public:
 
     PageID selectPageToEvict(const unordered_set<PageID> &pageIds) noexcept(false) override;
 
+    [[nodiscard]] bool isCacheFull() const noexcept override;
+
     // method for testing purposes only
-    bool isInFifo(PageID) const;
-    bool isInLru(PageID) const;
+    [[nodiscard]] bool isInFifo(PageID) const;
+    [[nodiscard]] bool isInLru(PageID) const;
 };
 
 #endif //TOMDB_TWO_Q_POLICY_H
