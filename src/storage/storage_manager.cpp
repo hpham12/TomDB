@@ -2,7 +2,7 @@
 // Created by Hieu Pham on 9/12/26.
 //
 
-#include "../../include/storage/storage_manager.h"
+#include "storage/storage_manager.h"
 
 #include <iostream>
 

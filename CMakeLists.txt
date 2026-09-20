@@ -40,6 +40,7 @@ add_library(tomdb_lib
         src/storage/storage_manager.cpp
         src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
+        src/buffer/buffer_frame.cpp
 )
 
 target_include_directories(tomdb_lib
@@ -79,6 +80,8 @@ add_executable(tomdb
         src/main.cpp
         src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
+        include/buffer/buffer_frame.h
+        src/buffer/buffer_frame.cpp
 )
 
 target_link_libraries(tomdb

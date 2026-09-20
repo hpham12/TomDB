@@ -120,4 +120,97 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     ASSERT_EQ(slot->size, 123456);
 }
 
+TEST_F(BufferManagerTest, UnpinPage) {
+    BufferManager bm;
 
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+    bm.pinPage(pageId, SHARED);
+
+    ASSERT_TRUE(bm.isPinned(pageId));
+
+    bm.unpinPage(pageId);
+    ASSERT_FALSE(bm.isPinned(pageId));
+}
+
+TEST_F(BufferManagerTest, Unpin) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+    bm.pinPage(pageId, SHARED);
+
+    ASSERT_TRUE(bm.isPinned(pageId));
+
+    bm.unpinPage(pageId);
+    ASSERT_FALSE(bm.isPinned(pageId));
+}
+
+TEST_F(BufferManagerTest, UnpinPageThatIsNotPinned) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+
+    ASSERT_THROW(bm.unpinPage(pageId), std::logic_error);
+}
+
+TEST_F(BufferManagerTest, GetNumPages) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    ASSERT_EQ(bm.getNumPages("fm"), 1);
+
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=5};
+    bm.pinPage(pageId, SHARED);
+
+    ASSERT_EQ(bm.getNumPages("fm"), 6);
+}
+
+TEST_F(BufferManagerTest, GetNumPagesWithNonExisitentFm) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    ASSERT_THROW(bm.getNumPages("fm1"), FileManagerNotRegisteredException);
+}
+
+TEST_F(BufferManagerTest, FlushPage) {
+    BufferManager bm;
+    auto randomFilePath = generateRandomFilePath();
+
+    bm.registerFileManager("fm", randomFilePath);
+    PageID pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+
+    auto &page = bm.pinPage(pageId, SHARED);
+
+    Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
+
+    ASSERT_EQ(slots[2].empty, true);
+    ASSERT_EQ(slots[2].offset, INVALID_VALUE);
+    ASSERT_EQ(slots[2].size, INVALID_VALUE);
+
+    slots[2].empty = false;
+    slots[2].offset = 123;
+    slots[2].size = 123456;
+
+    bm.flushPage(pageId);
+
+    ASSERT_EQ(slots[2].empty, false);
+    ASSERT_EQ(slots[2].offset, 123);
+    ASSERT_EQ(slots[2].size, 123456);
+}

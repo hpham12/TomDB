@@ -6,6 +6,8 @@
 
 #include <functional>
 
+#include "buffer/buffer_frame.h"
+
 BufferManager::BufferManager() {
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         bufferPool.emplace_back(std::make_unique<BufferFrame>());
@@ -13,7 +15,7 @@ BufferManager::BufferManager() {
     }
 }
 
-std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode lockMode) noexcept(false) {
+std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
     if (pinnedPages.contains(pageId)) {
         policy->accessPage(pageId);
         auto frameId = pageToFrameMapping[pageId];
@@ -26,16 +28,7 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode loc
     }
 
     if (policy->isCacheFull()) {
-        auto pageToEvict = policy->selectPageToEvict(pinnedPages);
-        if (pageToEvict == INVALID_PAGE_ID) {
-            throw std::logic_error("Error: Cannot find page to evict");
-        }
-        auto frameId = pageToFrameMapping[pageToEvict];
-        auto &frame = bufferPool.at(frameId);
-        if (frame->isDirty) {
-            flushPage(pageId);
-        }
-        availableFrames.insert(frameId);
+        evictPage();
     }
 
     // find an available frame
@@ -60,22 +53,41 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode loc
 }
 
 void BufferManager::unpinPage(PageID pageId) {
+    if (!pinnedPages.contains(pageId)) {
+        throw std::logic_error("Error: page is not pinned");
+    }
 
+    pinnedPages.erase(pageId);
 }
 
-size_t BufferManager::getNumPages(const std::string& fileManagerId) const {
+size_t BufferManager::getNumPages(const std::string &fileManagerId) const {
     return storageManager->getNumPages(fileManagerId);
 }
 
 void BufferManager::flushPage(PageID pageId) {
-    // TODO: Implement
+    auto frameId = pageToFrameMapping[pageId];
+    auto &frame = bufferPool[frameId];
+    storageManager->flushPage(pageId, *frame->page);
 }
 
-void BufferManager::evictPage(PageID pageId) {
-    // TODO: Implement
-
+void BufferManager::evictPage() {
+    auto pageToEvict = policy->selectPageToEvict(pinnedPages);
+    if (pageToEvict == INVALID_PAGE_ID) {
+        throw std::logic_error("Error: Cannot find page to evict");
+    }
+    auto frameId = pageToFrameMapping[pageToEvict];
+    auto &frame = bufferPool.at(frameId);
+    if (frame->isDirty) {
+        flushPage(pageToEvict);
+    }
+    frame->reset();
+    availableFrames.insert(frameId);
 }
 
 void BufferManager::registerFileManager(const std::string &fileManagerId, const std::string &filePath) const {
     storageManager->registerFileManager(fileManagerId, filePath);
+}
+
+bool BufferManager::isPinned(PageID pageId) const {
+    return pinnedPages.contains(pageId);
 }
