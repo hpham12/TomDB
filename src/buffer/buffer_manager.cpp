@@ -27,6 +27,9 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode loc
 
     if (policy->isCacheFull()) {
         auto pageToEvict = policy->selectPageToEvict(pinnedPages);
+        if (pageToEvict == INVALID_PAGE_ID) {
+            throw std::logic_error("Error: Cannot find page to evict");
+        }
         auto frameId = pageToFrameMapping[pageToEvict];
         auto &frame = bufferPool.at(frameId);
         if (frame->isDirty) {
@@ -51,12 +54,13 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID& pageId, LockMode loc
     bufferPool[availableFrameId]->page = std::move(page);
     pageToFrameMapping[pageId] = availableFrameId;
     availableFrames.erase(availableFrameId);
+    pinnedPages.insert(pageId);
 
     return bufferPool[availableFrameId]->page;
 }
 
 void BufferManager::unpinPage(PageID pageId) {
-    // TODO: Implement
+
 }
 
 size_t BufferManager::getNumPages(const std::string& fileManagerId) const {
@@ -69,6 +73,7 @@ void BufferManager::flushPage(PageID pageId) {
 
 void BufferManager::evictPage(PageID pageId) {
     // TODO: Implement
+
 }
 
 void BufferManager::registerFileManager(const std::string &fileManagerId, const std::string &filePath) const {

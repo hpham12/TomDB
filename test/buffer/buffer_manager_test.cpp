@@ -52,7 +52,7 @@ TEST_F(BufferManagerTest, PinPage) {
     ASSERT_EQ(slot->size, 123456);
 }
 
-TEST_F(BufferManagerTest, PinPageWithCacheEviction) {
+TEST_F(BufferManagerTest, PinPageWithnoEvictablePage) {
     BufferManager bm;
 
     auto randomFilePath = generateRandomFilePath();
@@ -77,19 +77,12 @@ TEST_F(BufferManagerTest, PinPageWithCacheEviction) {
     bm.registerFileManager("fm", randomFilePath);
 
     // load many pages so the cache is full
-    for (size_t i = 0; i < MAX_CACHED_PAGES + 10; i++) {
+    for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
         bm.pinPage(pageId, SHARED);
     }
 
-    auto &page = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
-    ASSERT_NE(page, nullptr);
-
-    Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
-
-    ASSERT_EQ(slot->empty, false);
-    ASSERT_EQ(slot->offset, 123);
-    ASSERT_EQ(slot->size, 123456);
+    ASSERT_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=10000}, SHARED), std::logic_error);
 }
 
 TEST_F(BufferManagerTest, PinExistingPinnedPage) {
@@ -126,4 +119,5 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     ASSERT_EQ(slot->offset, 123);
     ASSERT_EQ(slot->size, 123456);
 }
+
 
