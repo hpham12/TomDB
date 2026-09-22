@@ -22,6 +22,9 @@ class BufferManager {
     // a vector containing buffer frame cached in memory
     std::vector<std::unique_ptr<BufferFrame>> bufferPool;
 
+    // mutex to guard the buffer pool
+    std::mutex bufferPoolMutex;
+
     // pages that are pinned (locked). Those pages will not be evicted by policy
     std::unordered_set<PageID> pinnedPages;
 
@@ -42,7 +45,8 @@ class BufferManager {
     std::unordered_set<FrameID> availableFrames;
     std::unique_ptr<StorageManager> storageManager = std::make_unique<StorageManager>();
     // std::unique_ptr<LockTable> lockTable;
-    // TODO: Need an array of atomic counters to track who is using a frame
+
+    // An array of atomic counters to track who is using a frame
     std::array<std::atomic<uint16_t>, MAX_CACHED_PAGES> pinCounters{};
 
     void evictPage();

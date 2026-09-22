@@ -120,6 +120,26 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     ASSERT_EQ(slot->size, 123456);
 }
 
+TEST_F(BufferManagerTest, MultiplePinsAndUnpins) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+    bm.pinPage(pageId, SHARED);
+    bm.pinPage(pageId, SHARED);
+
+    ASSERT_TRUE(bm.isPinned(pageId));
+
+    bm.unpinPage(pageId);
+    ASSERT_TRUE(bm.isPinned(pageId));
+
+    bm.unpinPage(pageId);
+    ASSERT_FALSE(bm.isPinned(pageId));
+}
+
 TEST_F(BufferManagerTest, UnpinPage) {
     BufferManager bm;
 

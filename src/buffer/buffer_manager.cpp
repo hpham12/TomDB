@@ -17,14 +17,17 @@ BufferManager::BufferManager() {
 
 std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
     pinMutex.lock();
+    bufferPoolMutex.lock();
     if (pinnedPages.contains(pageId)) {
         policy->accessPage(pageId);
         auto frameId = pageToFrameMapping[pageId];
         auto &frame = bufferPool.at(frameId);
         pinMutex.unlock();
+        ++pinCounters[frameId];
         return frame->page;
     }
     pinMutex.unlock();
+    bufferPoolMutex.unlock();
 
     if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
         storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
@@ -48,6 +51,8 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode loc
     std::unique_ptr<Page> page = storageManager->getPage(pageId);
 
     policy->accessPage(pageId);
+
+    std::lock_guard buffeGuard(bufferPoolMutex);
     bufferPool[frameId]->isDirty = false;
     bufferPool[frameId]->frameId = frameId;
     bufferPool[frameId]->pageId = pageId;
