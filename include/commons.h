@@ -18,9 +18,11 @@ inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
 inline constexpr size_t INVALID_VALUE = numeric_limits<uint64_t>::max();
 
+inline constexpr size_t INVALID_FRAME_ID = numeric_limits<uint16_t>::max();
+
 inline constexpr size_t MAX_SLOTS = 50;
 
-using FrameID = uint64_t;
+using FrameID = uint16_t;
 
 struct PageID {
     std::string fileManagerId;

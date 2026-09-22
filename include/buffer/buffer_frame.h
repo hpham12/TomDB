@@ -12,7 +12,7 @@
 class BufferFrame {
     std::unique_ptr<Page> page = nullptr;
     PageID pageId = INVALID_PAGE_ID;
-    FrameID frameId = INVALID_VALUE;
+    FrameID frameId = INVALID_FRAME_ID;
     bool isDirty = false;
 
     friend class BufferManager;

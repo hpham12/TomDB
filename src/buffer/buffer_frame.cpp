@@ -11,6 +11,6 @@ void BufferFrame::markDirty() {
 void BufferFrame::reset() {
     page = nullptr;
     pageId = INVALID_PAGE_ID;
-    frameId = INVALID_VALUE;
+    frameId = INVALID_FRAME_ID;
     isDirty = false;
 }
