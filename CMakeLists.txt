@@ -48,6 +48,13 @@ target_include_directories(tomdb_lib
         ${PROJECT_SOURCE_DIR}/include
 )
 
+# Public headers use gtest/gtest_prod.h for FRIEND_TEST declarations.
+# Propagate GoogleTest's include requirements to consumers of those headers.
+target_link_libraries(tomdb_lib
+        PUBLIC
+        GTest::gtest
+)
+
 # --------------------
 # Coverage
 # --------------------

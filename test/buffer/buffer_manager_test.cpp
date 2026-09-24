@@ -209,6 +209,41 @@ TEST_F(BufferManagerTest, GetNumPagesWithNonExisitentFm) {
     ASSERT_THROW(bm.getNumPages("fm1"), FileManagerNotRegisteredException);
 }
 
+TEST_F(BufferManagerTest, EvictPage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    // load multiple pages
+    for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
+        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
+        bm.pinPage(pageId, SHARED);
+    }
+
+    PageID firstPageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
+
+    bm.unpinPage(firstPageId);
+
+    ASSERT_TRUE(bm.pageToFrameMapping.contains(firstPageId));
+    ASSERT_TRUE(bm.availableFrames.empty());
+
+    bm.evictPage();
+
+    // the first page will be evicted
+    ASSERT_FALSE(bm.pageToFrameMapping.contains(firstPageId));
+    ASSERT_FALSE(bm.availableFrames.empty());
+
+    auto availableFrameId = *bm.availableFrames.begin();
+    auto &evictedFrame = bm.bufferPool[availableFrameId];
+    ASSERT_EQ(evictedFrame->pageId, INVALID_PAGE_ID);
+    ASSERT_EQ(evictedFrame->frameId, INVALID_FRAME_ID);
+    ASSERT_EQ(evictedFrame->page, nullptr);
+    ASSERT_FALSE(evictedFrame->isDirty);
+}
+
 TEST_F(BufferManagerTest, FlushPage) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();

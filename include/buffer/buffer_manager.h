@@ -15,7 +15,7 @@
 #include "commons.h"
 #include "policy.h"
 #include "two_queue_policy.h"
-#include "records/page.h"
+#include "gtest/gtest_prod.h"
 #include "storage/storage_manager.h"
 
 class BufferManager {
@@ -50,6 +50,8 @@ class BufferManager {
     std::array<std::atomic<uint16_t>, MAX_CACHED_PAGES> pinCounters{};
 
     void evictPage();
+
+    FRIEND_TEST(BufferManagerTest, EvictPage);
 public:
     BufferManager();
     std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);

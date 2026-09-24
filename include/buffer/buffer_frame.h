@@ -8,6 +8,7 @@
 
 #include "commons.h"
 #include "records/page.h"
+#include "gtest/gtest_prod.h"
 
 class BufferFrame {
     PageID pageId = INVALID_PAGE_ID;
@@ -15,6 +16,8 @@ class BufferFrame {
     bool isDirty = false;
 
     friend class BufferManager;
+
+    FRIEND_TEST(BufferManagerTest, EvictPage);
 
 public:
     std::unique_ptr<Page> page = nullptr;
