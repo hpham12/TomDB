@@ -52,7 +52,7 @@ class BufferManager {
     void evictPage();
 public:
     BufferManager();
-    std::unique_ptr<Page> &pinPage(const PageID& pageId, LockMode lockMode);
+    std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);
     void unpinPage(PageID pageId);
     void flushPage(PageID pageId);
     size_t getNumPages(const std::string& fileManagerId) const;

@@ -15,7 +15,7 @@ BufferManager::BufferManager() {
     }
 }
 
-std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
+std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
     pinMutex.lock();
     bufferPoolMutex.lock();
     if (pinnedPages.contains(pageId)) {
@@ -24,14 +24,10 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode loc
         auto &frame = bufferPool.at(frameId);
         pinMutex.unlock();
         ++pinCounters[frameId];
-        return frame->page;
+        return frame;
     }
     pinMutex.unlock();
     bufferPoolMutex.unlock();
-
-    if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
-        storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
-    }
 
     FrameID frameId;
 
@@ -46,6 +42,10 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode loc
             throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
         }
         frameId = *availableFrames.begin();
+    }
+
+    if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
+        storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
     }
 
     std::unique_ptr<Page> page = storageManager->getPage(pageId);
@@ -67,7 +67,7 @@ std::unique_ptr<Page> &BufferManager::pinPage(const PageID &pageId, LockMode loc
 
     ++pinCounters[frameId];
 
-    return bufferPool[frameId]->page;
+    return bufferPool[frameId];
 }
 
 void BufferManager::unpinPage(PageID pageId) {
@@ -100,6 +100,9 @@ void BufferManager::evictPage() {
     auto pageToEvict = policy->selectPageToEvict(pinnedPages);
     if (pageToEvict == INVALID_PAGE_ID) {
         throw std::logic_error("Error: Cannot find page to evict");
+    }
+    if (!pageToFrameMapping.contains(pageToEvict)) {
+        throw std::logic_error("Error: Could not find page to evict");
     }
     auto frameId = pageToFrameMapping[pageToEvict];
     auto &frame = bufferPool.at(frameId);
