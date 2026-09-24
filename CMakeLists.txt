@@ -109,6 +109,7 @@ add_executable(tomdb_tests
         test/buffer/two_queue_policy_test.cpp
         test/buffer/buffer_manager_test.cpp
         test/test_utils.h
+        test/buffer/buffer_frame_test.cpp
 )
 
 target_link_libraries(tomdb_tests

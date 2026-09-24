@@ -10,7 +10,6 @@
 #include "records/page.h"
 
 class BufferFrame {
-    std::unique_ptr<Page> page = nullptr;
     PageID pageId = INVALID_PAGE_ID;
     FrameID frameId = INVALID_FRAME_ID;
     bool isDirty = false;
@@ -18,9 +17,11 @@ class BufferFrame {
     friend class BufferManager;
 
 public:
+    std::unique_ptr<Page> page = nullptr;
     BufferFrame() = default;
     void markDirty();
     void reset();
+    bool isPageDirty() const;
 };
 
 #endif //TOMDB_BUFFER_FRAME_H

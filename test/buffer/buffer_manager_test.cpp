@@ -42,7 +42,7 @@ TEST_F(BufferManagerTest, PinPage) {
     // buffer manager functionality test
     bm.registerFileManager("fm1", randomFilePath);
 
-    auto &page = bm.pinPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, SHARED);
+    auto &page = bm.pinPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, SHARED)->page;
     ASSERT_NE(page, nullptr);
 
     Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
@@ -110,7 +110,7 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     bm.registerFileManager("fm", randomFilePath);
 
     bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
-    auto &page = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
+    auto &page = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED)->page;
     ASSERT_NE(page, nullptr);
 
     Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
@@ -216,7 +216,7 @@ TEST_F(BufferManagerTest, FlushPage) {
     bm.registerFileManager("fm", randomFilePath);
     PageID pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
 
-    auto &page = bm.pinPage(pageId, SHARED);
+    auto &page = bm.pinPage(pageId, SHARED)->page;
 
     Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
 

@@ -14,3 +14,7 @@ void BufferFrame::reset() {
     frameId = INVALID_FRAME_ID;
     isDirty = false;
 }
+
+bool BufferFrame::isPageDirty() const {
+    return isDirty;
+}
