@@ -109,9 +109,9 @@ void BufferManager::evictPage() {
     if (frame->isDirty) {
         flushPage(pageToEvict);
     }
+    pageToFrameMapping.erase(pageToEvict);
     frame->reset();
     availableFrames.insert(frameId);
-    pageToFrameMapping.erase(pageToEvict);
 }
 
 void BufferManager::registerFileManager(const std::string &fileManagerId, const std::string &filePath) const {
