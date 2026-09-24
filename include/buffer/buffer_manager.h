@@ -52,6 +52,7 @@ class BufferManager {
     void evictPage();
 
     FRIEND_TEST(BufferManagerTest, EvictPage);
+    FRIEND_TEST(BufferManagerTest, EvictPageFailsWithNoEvictablePage);
 public:
     BufferManager();
     std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);

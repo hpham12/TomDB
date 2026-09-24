@@ -244,6 +244,23 @@ TEST_F(BufferManagerTest, EvictPage) {
     ASSERT_FALSE(evictedFrame->isDirty);
 }
 
+TEST_F(BufferManagerTest, EvictPageFailsWithNoEvictablePage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    // load multiple pages
+    for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
+        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
+        bm.pinPage(pageId, SHARED);
+    }
+
+    ASSERT_THROW(bm.evictPage(), std::logic_error);
+}
+
 TEST_F(BufferManagerTest, FlushPage) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();
