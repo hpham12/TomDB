@@ -16,18 +16,18 @@ BufferManager::BufferManager() {
 }
 
 std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
-    pinMutex.lock();
-    bufferPoolMutex.lock();
-    if (pinnedPages.contains(pageId)) {
-        policy->accessPage(pageId);
-        auto frameId = pageToFrameMapping[pageId];
-        auto &frame = bufferPool.at(frameId);
-        pinMutex.unlock();
-        ++pinCounters[frameId];
-        return frame;
+    {
+        std::lock_guard mutexGuard(pinMutex);
+        std::lock_guard bufferGuard(bufferPoolMutex);
+        if (pinnedPages.contains(pageId)) {
+            policy->accessPage(pageId);
+            auto frameId = pageToFrameMapping[pageId];
+            auto &frame = bufferPool.at(frameId);
+            pinMutex.unlock();
+            ++pinCounters[frameId];
+            return frame;
+        }
     }
-    pinMutex.unlock();
-    bufferPoolMutex.unlock();
 
     FrameID frameId;
 
@@ -71,11 +71,12 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
 }
 
 void BufferManager::unpinPage(PageID pageId) {
-    pinMutex.lock();
-    if (!pinnedPages.contains(pageId)) {
-        throw std::logic_error("Error: page is not pinned");
+    {
+        std::lock_guard guard(pinMutex);
+        if (!pinnedPages.contains(pageId)) {
+            throw std::logic_error("Error: page is not pinned");
+        }
     }
-    pinMutex.unlock();
 
     auto frameId = pageToFrameMapping[pageId];
     --pinCounters[frameId];
