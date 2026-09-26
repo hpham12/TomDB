@@ -102,7 +102,7 @@ void BufferManager::evictPage() {
         throw std::logic_error("Error: Cannot find page to evict");
     }
     if (!pageToFrameMapping.contains(pageToEvict)) {
-        throw std::logic_error("Error: Could not find page to evict");
+        return;
     }
     auto frameId = pageToFrameMapping[pageToEvict];
     auto &frame = bufferPool.at(frameId);

@@ -261,6 +261,22 @@ TEST_F(BufferManagerTest, EvictPageFailsWithNoEvictablePage) {
     ASSERT_THROW(bm.evictPage(), std::logic_error);
 }
 
+TEST_F(BufferManagerTest, EvictPageNoopWhenMappingDoesNotContainPage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
+    bm.pinPage(pageId, SHARED);
+
+    bm.unpinPage(pageId);
+    bm.pageToFrameMapping.erase(pageId);
+    ASSERT_NO_THROW(bm.evictPage());
+}
+
 TEST_F(BufferManagerTest, EvictPageFlushesDirtyPage) {
     BufferManager bm;
 
