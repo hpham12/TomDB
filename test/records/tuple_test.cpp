@@ -126,3 +126,41 @@ TEST(TupleTest, GetFieldOutOfRange) {
     tuple.addField(std::make_unique<Field>(123123123));
     EXPECT_THROW(tuple.getField(3), std::out_of_range);
 }
+
+TEST(TupleTest, DeserializeConsumesExactlyOneTuple) {
+    Tuple tuple1{};
+    Tuple tuple2{};
+
+    tuple1.addField(std::make_unique<Field>(-42));
+    tuple2.addField(std::make_unique<Field>(std::string("second")));
+
+    std::stringstream stream(tuple1.serialize() + tuple2.serialize());
+
+    auto deserialized1 = Tuple::deserialize(stream);
+    EXPECT_EQ(deserialized1->serialize(), tuple1.serialize());
+
+    auto deserialized2 = Tuple::deserialize(stream);
+    EXPECT_EQ(deserialized2->serialize(), tuple2.serialize());
+    EXPECT_EQ(stream.peek(), std::char_traits<char>::eof());
+}
+
+TEST(TupleTest, EmptyTupleRoundTrip) {
+    Tuple tuple{};
+
+    std::stringstream stream(tuple.serialize());
+    auto deserialized = Tuple::deserialize(stream);
+
+    EXPECT_EQ(deserialized->getSize(), sizeof(uint32_t));
+    EXPECT_EQ(deserialized->serialize(), tuple.serialize());
+    EXPECT_THROW(deserialized->getField(0), std::out_of_range);
+}
+
+TEST(TupleTest, ReturnedFieldIsAnIndependentCopy) {
+    Tuple tuple{};
+    tuple.addField(std::make_unique<Field>(std::string("original")));
+
+    auto field = tuple.getField(0);
+    field->value[0] = 'X';
+
+    EXPECT_STREQ(tuple.getField(0)->value.get(), "original");
+}

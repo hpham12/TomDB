@@ -150,3 +150,33 @@ TEST(PageTest, DeleteTupleFailsWhenSlotIsEmpty) {
     Page page;
     ASSERT_FALSE(page.deleteTuple(0));
 }
+
+TEST(PageTest, TupleCanExactlyFillRemainingSpace) {
+    Page page;
+    auto tuple = std::make_unique<Tuple>();
+
+    const size_t overhead = sizeof(uint32_t) + sizeof(FieldType) + sizeof(uint16_t);
+    std::string s(PAGE_SIZE - page.metadata_size - overhead, 'x');
+    tuple->addField(std::make_unique<Field>(s));
+
+    ASSERT_EQ(page.addTuple(std::move(tuple), nullptr), 0);
+
+    const std::string before(page.pageData.get(), PAGE_SIZE);
+    ASSERT_EQ(page.addTuple(createSmallTestTuple(), nullptr), INVALID_VALUE);
+    ASSERT_EQ(std::string(page.pageData.get(), PAGE_SIZE), before);
+}
+
+TEST(PageTest, ReusesDeletedSlotWithoutChangingNeighbor) {
+    Page page;
+    ASSERT_EQ(page.addTuple(createSmallTestTuple(), nullptr), 0);
+    ASSERT_EQ(page.addTuple(createLargeTestTuple(), nullptr), 1);
+
+    Slot* slots = reinterpret_cast<Slot*>(page.pageData.get());
+    const std::string neighbor(page.pageData.get() + slots[1].offset, slots[1].size);
+
+    ASSERT_TRUE(page.deleteTuple(0));
+    ASSERT_FALSE(page.deleteTuple(0));
+    ASSERT_EQ(page.addTuple(createSmallTestTuple(), nullptr), 0);
+    ASSERT_EQ(std::string(page.pageData.get() + slots[1].offset, slots[1].size), neighbor);
+    ASSERT_FALSE(page.deleteTuple(MAX_SLOTS));
+}
