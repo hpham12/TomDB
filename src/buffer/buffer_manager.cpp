@@ -23,7 +23,6 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
             policy->accessPage(pageId);
             auto frameId = pageToFrameMapping[pageId];
             auto &frame = bufferPool.at(frameId);
-            pinMutex.unlock();
             ++pinCounters[frameId];
             return frame;
         }
