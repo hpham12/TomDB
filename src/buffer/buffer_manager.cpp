@@ -19,10 +19,12 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     {
         std::lock_guard mutexGuard(pinMutex);
         std::lock_guard bufferGuard(bufferPoolMutex);
-        if (pinnedPages.contains(pageId)) {
+        // Cached pages retain their contents and dirty state between pins.
+        if (pageToFrameMapping.contains(pageId)) {
             policy->accessPage(pageId);
             auto frameId = pageToFrameMapping[pageId];
             auto &frame = bufferPool.at(frameId);
+            pinnedPages.insert(pageId);
             ++pinCounters[frameId];
             return frame;
         }
@@ -30,18 +32,14 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
 
     FrameID frameId;
 
-    if (pageToFrameMapping.contains(pageId)) {
-        frameId = pageToFrameMapping[pageId];
-    } else {
-        if (policy->isCacheFull()) {
-            evictPage();
-        }
-        // find an available frame
-        if (availableFrames.empty()) {
-            throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
-        }
-        frameId = *availableFrames.begin();
+    if (policy->isCacheFull()) {
+        evictPage();
     }
+    // find an available frame
+    if (availableFrames.empty()) {
+        throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
+    }
+    frameId = *availableFrames.begin();
 
     if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
         storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);

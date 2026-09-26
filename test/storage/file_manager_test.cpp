@@ -29,7 +29,7 @@ protected:
 };
 
 TEST_F(FileManagerTest, InitializationWhenDataFileNotExists) {
-    std::filesystem::path filePath = "test-123456.data";
+    std::filesystem::remove(filePath);
     FileManager fileManager(filePath);
 
     ASSERT_EQ(fileManager.getNumPages(), 1);
@@ -148,4 +148,38 @@ TEST_F(FileManagerTest, ExtendTilPageSmallerThanNumPages) {
     ASSERT_EQ(fileManager.getNumPages(), 11);
     fileManager.extend(9);
     ASSERT_EQ(fileManager.getNumPages(), 11);
+}
+
+TEST_F(FileManagerTest, ReopenPreservesPagesAndExtensionDoesNotOverwriteData) {
+    Page newPage;
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(std::string("persisted")));
+    ASSERT_EQ(newPage.addTuple(std::move(tuple), nullptr), 0);
+
+    const std::string expected(newPage.pageData.get(), PAGE_SIZE);
+
+    {
+        FileManager fileManager(filePath);
+        fileManager.extend(2);
+        ASSERT_TRUE(fileManager.flush(1, newPage));
+        fileManager.extend(4);
+    }
+
+    FileManager fileManager(filePath);
+    ASSERT_EQ(fileManager.getNumPages(), 5);
+    ASSERT_EQ(std::filesystem::file_size(filePath), 5 * PAGE_SIZE);
+
+    auto updatedPage = fileManager.load(1);
+    ASSERT_EQ(std::string(updatedPage->pageData.get(), PAGE_SIZE), expected);
+
+    for (uint16_t pageId : {0, 2, 3, 4}) {
+        auto page = fileManager.load(pageId);
+        Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
+        for (size_t i = 0; i < MAX_SLOTS; i++) {
+            ASSERT_TRUE(slots[i].empty);
+        }
+    }
+
+    ASSERT_THROW(fileManager.load(5), std::out_of_range);
+    ASSERT_FALSE(fileManager.flush(5, newPage));
 }

@@ -328,7 +328,7 @@ TEST_F(BufferManagerTest, EvictPageFlushesDirtyPage) {
     bm.evictPage();
 
     unique_ptr<BufferFrame> &updatedFrame = bm.pinPage(pageId, SHARED);
-    auto &updatedPage = frame->page;
+    auto &updatedPage = updatedFrame->page;
 
     slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
 
@@ -340,6 +340,7 @@ TEST_F(BufferManagerTest, EvictPageFlushesDirtyPage) {
 TEST_F(BufferManagerTest, FlushPage) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
 
     bm.registerFileManager("fm", randomFilePath);
     PageID pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
@@ -359,10 +360,79 @@ TEST_F(BufferManagerTest, FlushPage) {
     bm.flushPage(pageId);
 
     bm.unpinPage(pageId);
-    auto &updatedPage = bm.pinPage(pageId, SHARED)->page;
+    FileManager reader(randomFilePath);
+    auto updatedPage = reader.load(0);
     slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
 
     ASSERT_EQ(slots[2].empty, false);
     ASSERT_EQ(slots[2].offset, 123);
     ASSERT_EQ(slots[2].size, 123456);
+}
+
+TEST_F(BufferManagerTest, RepinningDirtyCachedPagePreservesChanges) {
+    BufferManager bm;
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    auto &frame = bm.pinPage(pageId, EXCLUSIVE);
+
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(std::string("unflushed")));
+    ASSERT_EQ(frame->page->addTuple(std::move(tuple), nullptr), 0);
+
+    frame->markDirty();
+
+    const std::string expected(frame->page->pageData.get(), PAGE_SIZE);
+
+    bm.unpinPage(pageId);
+    auto &updatedFrame = bm.pinPage(pageId, SHARED);
+
+    ASSERT_TRUE(bm.isPinned(pageId));
+    ASSERT_TRUE(updatedFrame->isPageDirty());
+    ASSERT_EQ(std::string(updatedFrame->page->pageData.get(), PAGE_SIZE), expected);
+
+    bm.unpinPage(pageId);
+    ASSERT_FALSE(bm.isPinned(pageId));
+}
+
+TEST_F(BufferManagerTest, AutomaticEvictionPersistsDirtyVictimAndReusesFrame) {
+    BufferManager bm;
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    PageID firstPageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    auto &frame = bm.pinPage(firstPageId, EXCLUSIVE);
+
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(123));
+    ASSERT_EQ(frame->page->addTuple(std::move(tuple), nullptr), 0);
+
+    frame->markDirty();
+
+    const std::string expected(frame->page->pageData.get(), PAGE_SIZE);
+
+    // load remaining pages so the cache is full
+    for (size_t i = 1; i < MAX_CACHED_PAGES; i++) {
+        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
+        bm.pinPage(pageId, SHARED);
+    }
+
+    bm.unpinPage(firstPageId);
+
+    PageID nextPageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(MAX_CACHED_PAGES)};
+    auto &replacement = bm.pinPage(nextPageId, SHARED);
+    ASSERT_FALSE(replacement->isPageDirty());
+
+    FileManager fileManager(randomFilePath);
+    auto persistedPage = fileManager.load(0);
+    ASSERT_EQ(std::string(persistedPage->pageData.get(), PAGE_SIZE), expected);
+
+    bm.unpinPage(nextPageId);
+    auto &updatedFrame = bm.pinPage(firstPageId, SHARED);
+    ASSERT_EQ(std::string(updatedFrame->page->pageData.get(), PAGE_SIZE), expected);
 }
