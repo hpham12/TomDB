@@ -261,6 +261,53 @@ TEST_F(BufferManagerTest, EvictPageFailsWithNoEvictablePage) {
     ASSERT_THROW(bm.evictPage(), std::logic_error);
 }
 
+TEST_F(BufferManagerTest, EvictPageFlushesDirtyPage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    std::fstream filestream;
+    filestream.open(randomFilePath, std::fstream::in | std::fstream::out);
+    filestream.seekp(0, std::fstream::beg);
+
+    Page newPage;
+    Slot* newSlot = reinterpret_cast<Slot*>(newPage.pageData.get());
+    newSlot->empty = false;
+    newSlot->offset = 123;
+    newSlot->size = 123456;
+    filestream.write(newPage.pageData.get(), PAGE_SIZE);
+    filestream.flush();
+
+    bm.registerFileManager("fm", randomFilePath);
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
+    unique_ptr<BufferFrame> &frame = bm.pinPage(pageId, SHARED);
+    auto &page = frame->page;
+
+    Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
+
+    ASSERT_EQ(slots[2].empty, true);
+    ASSERT_EQ(slots[2].offset, INVALID_VALUE);
+    ASSERT_EQ(slots[2].size, INVALID_VALUE);
+
+    slots[2].empty = false;
+    slots[2].offset = 123;
+    slots[2].size = 123456;
+
+    frame->markDirty();
+    bm.unpinPage(pageId);
+    bm.evictPage();
+
+    unique_ptr<BufferFrame> &updatedFrame = bm.pinPage(pageId, SHARED);
+    auto &updatedPage = frame->page;
+
+    slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
+
+    ASSERT_EQ(slots[2].empty, false);
+    ASSERT_EQ(slots[2].offset, 123);
+    ASSERT_EQ(slots[2].size, 123456);
+}
+
 TEST_F(BufferManagerTest, FlushPage) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();
@@ -281,6 +328,10 @@ TEST_F(BufferManagerTest, FlushPage) {
     slots[2].size = 123456;
 
     bm.flushPage(pageId);
+
+    bm.unpinPage(pageId);
+    auto &updatedPage = bm.pinPage(pageId, SHARED)->page;
+    slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
 
     ASSERT_EQ(slots[2].empty, false);
     ASSERT_EQ(slots[2].offset, 123);
