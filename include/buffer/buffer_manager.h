@@ -55,6 +55,7 @@ class BufferManager {
     FRIEND_TEST(BufferManagerTest, EvictPageFailsWithNoEvictablePage);
     FRIEND_TEST(BufferManagerTest, EvictPageFlushesDirtyPage);
     FRIEND_TEST(BufferManagerTest, EvictPageNoopWhenMappingDoesNotContainPage);
+    FRIEND_TEST(BufferManagerTest, PinPageFailsWhenAvailableFramesEmpty);
 public:
     BufferManager();
     std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);

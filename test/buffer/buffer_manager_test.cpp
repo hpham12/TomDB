@@ -140,6 +140,19 @@ TEST_F(BufferManagerTest, MultiplePinsAndUnpins) {
     ASSERT_FALSE(bm.isPinned(pageId));
 }
 
+TEST_F(BufferManagerTest, PinPageFailsWhenAvailableFramesEmpty) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+    auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
+
+    bm.availableFrames.clear();
+    ASSERT_THROW(bm.pinPage(pageId, SHARED), std::logic_error);
+}
+
 TEST_F(BufferManagerTest, UnpinPage) {
     BufferManager bm;
 
