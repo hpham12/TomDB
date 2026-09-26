@@ -14,8 +14,12 @@ TEST(BufferFrameTest, MarkDirty) {
 
 TEST(BufferFrameTest, Reset) {
     BufferFrame frame;
+    frame.page = std::make_unique<Page>();
     frame.markDirty();
+
     ASSERT_TRUE(frame.isPageDirty());
+
     frame.reset();
+    EXPECT_EQ(frame.page, nullptr);
     ASSERT_FALSE(frame.isPageDirty());
 }

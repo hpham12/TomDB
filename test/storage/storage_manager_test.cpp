@@ -28,8 +28,8 @@ TEST_F(StorageManagerTest, RegisterFileManager) {
     auto randomFilePath3 = generateRandomFilePath();
 
     filePaths.push_back(randomFilePath1);
-    filePaths.push_back(randomFilePath1);
-    filePaths.push_back(randomFilePath1);
+    filePaths.push_back(randomFilePath2);
+    filePaths.push_back(randomFilePath3);
 
     ASSERT_TRUE(storageManager.registerFileManager("fm1", randomFilePath1));
     ASSERT_TRUE(storageManager.registerFileManager("fm2", randomFilePath2));
@@ -84,9 +84,9 @@ TEST_F(StorageManagerTest, FlushPage) {
     auto &fileManager = storageManager.getFileManager("fm1");
     auto updatedPage = fileManager->load(0);
     auto *updatedSlots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
-    updatedSlots[0].empty = false;
-    updatedSlots[0].offset = 123;
-    updatedSlots[0].size = 123456;
+    ASSERT_FALSE(updatedSlots[0].empty);
+    ASSERT_EQ(updatedSlots[0].offset, 123);
+    ASSERT_EQ(updatedSlots[0].size, 123456);
 }
 
 TEST_F(StorageManagerTest, FlushPageWhenFileManagerIdNotFound) {
