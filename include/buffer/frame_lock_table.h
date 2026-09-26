@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <memory>
 
+#include "gtest/gtest_prod.h"
 #include "commons.h"
 
 class OwnershipInfo {
@@ -19,12 +20,22 @@ class OwnershipInfo {
     mutable std::mutex mutex;
     std::condition_variable exclusiveCV;
     std::condition_variable shareCountCv;
+
+    FRIEND_TEST(FrameLockTableTest, LockShare);
+    FRIEND_TEST(FrameLockTableTest, LockShareTimeout);
+    FRIEND_TEST(FrameLockTableTest, LockExclusive);
+    FRIEND_TEST(FrameLockTableTest, UnlockShare);
+    FRIEND_TEST(FrameLockTableTest, UnlockExclusive);
 };
 
 class FrameLockTable {
     std::array<std::unique_ptr<OwnershipInfo>, MAX_CACHED_PAGES> ownerShipInfo;
 
-    static void validateFrameId(const FrameID &frameId);
+    FRIEND_TEST(FrameLockTableTest, LockShare);
+    FRIEND_TEST(FrameLockTableTest, LockShareTimeout);
+    FRIEND_TEST(FrameLockTableTest, LockExclusive);
+    FRIEND_TEST(FrameLockTableTest, UnlockShare);
+    FRIEND_TEST(FrameLockTableTest, UnlockExclusive);
 
 public:
     void lockShare(FrameID frameId, uint64_t timeoutMillis = 1000) const;
@@ -34,6 +45,8 @@ public:
     void lockExclusive(FrameID frameId, uint64_t timeoutMillis = 1000) const;
 
     void unlockExclusive(FrameID frameId) const;
+
+    static void validateFrameId(const FrameID &frameId);
 };
 
 

@@ -17,7 +17,7 @@ BufferManager::BufferManager() {
 
 std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
     {
-        std::lock_guard mutexGuard(pinMutex);
+        std::lock_guard pinGuard(pinMutex);
         std::lock_guard bufferGuard(bufferPoolMutex);
         // Cached pages retain their contents and dirty state between pins.
         if (pageToFrameMapping.contains(pageId)) {
@@ -92,8 +92,6 @@ size_t BufferManager::getNumPages(const std::string &fileManagerId) const {
 }
 
 void BufferManager::flushPage(PageID pageId) {
-    std::shared_lock pageToFrameGuard(pageToFrameMappingMutex);
-    std::shared_lock bufferGuard(bufferPoolMutex);
     auto frameId = pageToFrameMapping[pageId];
     auto &frame = bufferPool[frameId];
     storageManager->flushPage(pageId, *frame->page);

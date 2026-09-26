@@ -120,6 +120,7 @@ add_executable(tomdb_tests
         test/test_utils.h
         test/buffer/buffer_frame_test.cpp
         src/buffer/frame_lock_table.cpp
+        test/buffer/frame_lock_table.cpp
 )
 
 target_link_libraries(tomdb_tests
