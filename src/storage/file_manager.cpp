@@ -1,10 +1,10 @@
-#include "../../include/storage/file_manager.h"
+#include "storage/file_manager.h"
 
 #include <filesystem>
 
 #include "commons.h"
 #include "iostream"
-#include "../../include/records/page.h"
+#include "records/page.h"
 
 //
 // Created by Hieu Pham on 8/30/26.

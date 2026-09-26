@@ -35,11 +35,15 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     if (policy->isCacheFull()) {
         evictPage();
     }
-    // find an available frame
-    if (availableFrames.empty()) {
-        throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
+
+    {
+        std::shared_lock guard(availableFramesMutex);
+        // find an available frame
+        if (availableFrames.empty()) {
+            throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
+        }
+        frameId = *availableFrames.begin();
     }
-    frameId = *availableFrames.begin();
 
     if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
         storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
@@ -49,7 +53,7 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
 
     policy->accessPage(pageId);
 
-    std::lock_guard buffeGuard(bufferPoolMutex);
+    std::lock_guard bufferGuard(bufferPoolMutex);
     bufferPool[frameId]->isDirty = false;
     bufferPool[frameId]->frameId = frameId;
     bufferPool[frameId]->pageId = pageId;
@@ -58,7 +62,6 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     availableFrames.erase(frameId);
 
     if (pinCounters[frameId] == 0) {
-        std::lock_guard guard(pinMutex);
         pinnedPages.insert(pageId);
     }
 
@@ -69,7 +72,7 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
 
 void BufferManager::unpinPage(PageID pageId) {
     {
-        std::lock_guard guard(pinMutex);
+        std::shared_lock guard(pinMutex);
         if (!pinnedPages.contains(pageId)) {
             throw std::logic_error("Error: page is not pinned");
         }
@@ -89,6 +92,8 @@ size_t BufferManager::getNumPages(const std::string &fileManagerId) const {
 }
 
 void BufferManager::flushPage(PageID pageId) {
+    std::shared_lock pageToFrameGuard(pageToFrameMappingMutex);
+    std::shared_lock bufferGuard(bufferPoolMutex);
     auto frameId = pageToFrameMapping[pageId];
     auto &frame = bufferPool[frameId];
     storageManager->flushPage(pageId, *frame->page);
@@ -99,16 +104,22 @@ void BufferManager::evictPage() {
     if (pageToEvict == INVALID_PAGE_ID) {
         throw std::logic_error("Error: Cannot find page to evict");
     }
+
+    std::unique_lock pageToFrameGuard(pageToFrameMappingMutex);
+
     if (!pageToFrameMapping.contains(pageToEvict)) {
         return;
     }
+
     auto frameId = pageToFrameMapping[pageToEvict];
+    std::shared_lock bufferGuard(bufferPoolMutex);
     auto &frame = bufferPool.at(frameId);
     if (frame->isDirty) {
         flushPage(pageToEvict);
     }
     pageToFrameMapping.erase(pageToEvict);
     frame->reset();
+    std::unique_lock availableFramesGuard(availableFramesMutex);
     availableFrames.insert(frameId);
 }
 
@@ -117,5 +128,6 @@ void BufferManager::registerFileManager(const std::string &fileManagerId, const 
 }
 
 bool BufferManager::isPinned(PageID pageId) const {
+    std::shared_lock pinnedPagesGuard(pinMutex);
     return pinnedPages.contains(pageId);
 }
