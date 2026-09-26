@@ -5,7 +5,7 @@
 #ifndef TOMDB_POLICY_H
 #define TOMDB_POLICY_H
 #include <unordered_set>
-#include "constants.h"
+#include "commons.h"
 
 class Policy {
 public:
@@ -13,6 +13,7 @@ public:
     virtual void evictPage(PageID pageId) noexcept(false) = 0;
     virtual void accessPage(PageID pageId) noexcept(false) = 0;
     virtual PageID selectPageToEvict(const std::unordered_set<PageID> &pageIds) noexcept(false) = 0;
+    [[nodiscard]] virtual bool isCacheFull() const noexcept = 0;
 };
 
 #endif //TOMDB_POLICY_H

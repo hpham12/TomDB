@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "constants.h"
+#include "commons.h"
 #include "iostream"
 #include "../../include/records/page.h"
 
@@ -87,7 +87,7 @@ void FileManager::extend(size_t maxPageId) {
         Page newPage;
         filestream.write(newPage.pageData.get(), PAGE_SIZE);
     }
-    
+
     filestream.flush();
     numPages += numPagesToAdd;
 }

@@ -38,12 +38,21 @@ add_library(tomdb_lib
         src/records/page.cpp
         src/storage/file_manager.cpp
         src/storage/storage_manager.cpp
-        src/buffer/two_q_policy.cpp
+        src/buffer/two_queue_policy.cpp
+        src/buffer/buffer_manager.cpp
+        src/buffer/buffer_frame.cpp
 )
 
 target_include_directories(tomdb_lib
         PUBLIC
         ${PROJECT_SOURCE_DIR}/include
+)
+
+# Public headers use gtest/gtest_prod.h for FRIEND_TEST declarations.
+# Propagate GoogleTest's include requirements to consumers of those headers.
+target_link_libraries(tomdb_lib
+        PUBLIC
+        GTest::gtest
 )
 
 # --------------------
@@ -76,11 +85,10 @@ add_executable(tomdb
         src/storage/storage_manager.cpp
         src/storage/file_manager.cpp
         src/main.cpp
-        include/buffer/buffer_manager.h
-        include/buffer/policy.h
-        include/buffer/two_q_policy.h
-        src/buffer/two_q_policy.cpp
+        src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
+        include/buffer/buffer_frame.h
+        src/buffer/buffer_frame.cpp
 )
 
 target_link_libraries(tomdb
@@ -105,7 +113,10 @@ add_executable(tomdb_tests
         test/records/page_test.cpp
         test/storage/file_manager_test.cpp
         test/storage/storage_manager_test.cpp
-        test/buffer/two_q_policy_test.cpp
+        test/buffer/two_queue_policy_test.cpp
+        test/buffer/buffer_manager_test.cpp
+        test/test_utils.h
+        test/buffer/buffer_frame_test.cpp
 )
 
 target_link_libraries(tomdb_tests

@@ -2,7 +2,7 @@
 // Created by Hieu Pham on 9/19/26.
 //
 
-#include "buffer/two_q_policy.h"
+#include "buffer/two_queue_policy.h"
 
 #include <gtest/gtest.h>
 
@@ -24,7 +24,7 @@ TEST(TwoQPolicyTest, AccessPageWhenBufferIsFull) {
     TwoQPolicy twoQueuePolicy;
 
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
-        PageID pageId{"fm", static_cast<uint16_t>(i)};
+        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
         twoQueuePolicy.accessPage(pageId);
         twoQueuePolicy.accessPage(pageId);
         ASSERT_FALSE(twoQueuePolicy.isInFifo(pageId));
@@ -32,7 +32,7 @@ TEST(TwoQPolicyTest, AccessPageWhenBufferIsFull) {
     }
 
     // at this point, buffer is full
-    PageID pageId{"fm1", 36218};
+    PageID pageId{.fileManagerId="fm1", .fileManagerPageId=36218};
     twoQueuePolicy.accessPage(pageId);
     ASSERT_FALSE(twoQueuePolicy.isInFifo(pageId));
     ASSERT_FALSE(twoQueuePolicy.isInLru(pageId));
@@ -41,7 +41,7 @@ TEST(TwoQPolicyTest, AccessPageWhenBufferIsFull) {
 TEST(TwoQPolicyTest, EvictPageInFifo) {
     TwoQPolicy twoQueuePolicy;
 
-    PageID pageId{"fm", 2};
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=2};
     twoQueuePolicy.accessPage(pageId);
     ASSERT_TRUE(twoQueuePolicy.isInFifo(pageId));
     ASSERT_FALSE(twoQueuePolicy.isInLru(pageId));
@@ -55,7 +55,7 @@ TEST(TwoQPolicyTest, EvictPageInFifo) {
 TEST(TwoQPolicyTest, EvictPageInLru) {
     TwoQPolicy twoQueuePolicy;
 
-    PageID pageId{"fm", 2};
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=2};
     twoQueuePolicy.accessPage(pageId);
     twoQueuePolicy.accessPage(pageId);
     ASSERT_FALSE(twoQueuePolicy.isInFifo(pageId));
@@ -71,10 +71,10 @@ TEST(TwoQPolicyTest, SelectPageInFifoToEvict) {
     TwoQPolicy twoQueuePolicy;
     std::unordered_set<PageID> pinnedPages;
 
-    PageID pageId1{"fm", 1};
+    PageID pageId1{.fileManagerId="fm", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId1);
 
-    PageID pageId2{"fm1", 1};
+    PageID pageId2{.fileManagerId="fm1", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId2);
     twoQueuePolicy.accessPage(pageId2);
 
@@ -90,10 +90,10 @@ TEST(TwoQPolicyTest, SelectPageInLruToEvict) {
     TwoQPolicy twoQueuePolicy;
     std::unordered_set<PageID> pinnedPages;
 
-    PageID pageId1{"fm", 1};
+    PageID pageId1{.fileManagerId="fm", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId1);
 
-    PageID pageId2{"fm1", 1};
+    PageID pageId2{.fileManagerId="fm1", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId2);
     twoQueuePolicy.accessPage(pageId2);
 
@@ -111,11 +111,11 @@ TEST(TwoQPolicyTest, SelectPageToEvictWhenPinnedPagesNotEmpty) {
     TwoQPolicy twoQueuePolicy;
     std::unordered_set<PageID> pinnedPages;
 
-    PageID pageId1{"fm", 1};
+    PageID pageId1{.fileManagerId="fm", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId1);
     pinnedPages.insert(pageId1);
 
-    PageID pageId2{"fm1", 1};
+    PageID pageId2{.fileManagerId="fm1", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId2);
     twoQueuePolicy.accessPage(pageId2);
 
@@ -131,11 +131,11 @@ TEST(TwoQPolicyTest, SelectPageToEvictWhenAllPagesarePinned) {
     TwoQPolicy twoQueuePolicy;
     std::unordered_set<PageID> pinnedPages;
 
-    PageID pageId1{"fm", 1};
+    PageID pageId1{.fileManagerId="fm", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId1);
     pinnedPages.insert(pageId1);
 
-    PageID pageId2{"fm1", 1};
+    PageID pageId2{.fileManagerId="fm1", .fileManagerPageId=1};
     twoQueuePolicy.accessPage(pageId2);
     twoQueuePolicy.accessPage(pageId2);
     pinnedPages.insert(pageId2);

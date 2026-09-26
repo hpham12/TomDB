@@ -2,7 +2,8 @@
 // Created by Hieu Pham on 9/12/26.
 //
 
-#include "../../include/storage/storage_manager.h"
+#include "storage/storage_manager.h"
+#include "../test_utils.h"
 
 #include <random>
 
@@ -18,15 +19,6 @@ protected:
 
     std::vector<std::string> filePaths;
 };
-
-std::string generateRandomFilePath() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution distr(1, 10000);
-    int randomNum = distr(gen);
-
-    return std::filesystem::temp_directory_path() / ("tomdb_test" + std::to_string(randomNum) + ".data");
-}
 
 TEST_F(StorageManagerTest, RegisterFileManager) {
     StorageManager storageManager;
