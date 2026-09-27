@@ -14,6 +14,7 @@
 
 #include "buffer_frame.h"
 #include "commons.h"
+#include "frame_lock_table.h"
 #include "policy.h"
 #include "two_queue_policy.h"
 #include "gtest/gtest_prod.h"
@@ -56,6 +57,8 @@ class BufferManager {
 
     // mutex to guard the pinCounters
     mutable std::shared_mutex pinCountersMutex;
+
+    std::unique_ptr<FrameLockTable> frameLockTable = std::make_unique<FrameLockTable>();
 
     void evictPage();
 

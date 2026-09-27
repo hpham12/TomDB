@@ -26,6 +26,13 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
             auto &frame = bufferPool.at(frameId);
             pinnedPages.insert(pageId);
             ++pinCounters[frameId];
+            if (lockMode == EXCLUSIVE) {
+                frameLockTable->lockExclusive(frameId);
+                frame->exclusive = true;
+            } else {
+                frameLockTable->lockShare(frameId);
+                frame->exclusive = false;
+            }
             return frame;
         }
     }
@@ -54,6 +61,15 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     policy->accessPage(pageId);
 
     std::lock_guard bufferGuard(bufferPoolMutex);
+
+    if (lockMode == EXCLUSIVE) {
+        frameLockTable->lockExclusive(frameId);
+        bufferPool[frameId]->exclusive = true;
+    } else {
+        frameLockTable->lockShare(frameId);
+        bufferPool[frameId]->exclusive = false;
+    }
+
     bufferPool[frameId]->isDirty = false;
     bufferPool[frameId]->frameId = frameId;
     bufferPool[frameId]->pageId = pageId;
@@ -79,6 +95,14 @@ void BufferManager::unpinPage(PageID pageId) {
     }
 
     auto frameId = pageToFrameMapping[pageId];
+    auto &frame = bufferPool.at(frameId);
+
+    if (frame->exclusive) {
+        frameLockTable->unlockExclusive(frameId);
+    } else {
+        frameLockTable->unlockShare(frameId);
+    }
+
     --pinCounters[frameId];
 
     if (pinCounters[frameId] == 0) {

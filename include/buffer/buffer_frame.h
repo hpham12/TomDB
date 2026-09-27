@@ -14,10 +14,12 @@ class BufferFrame {
     PageID pageId = INVALID_PAGE_ID;
     FrameID frameId = INVALID_FRAME_ID;
     bool isDirty = false;
+    bool exclusive = false;
 
     friend class BufferManager;
 
     FRIEND_TEST(BufferManagerTest, EvictPage);
+    FRIEND_TEST(BufferFrameTest, Reset);
 
 public:
     std::unique_ptr<Page> page = nullptr;
