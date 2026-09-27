@@ -38,6 +38,8 @@ class FrameLockTable {
     FRIEND_TEST(FrameLockTableTest, UnlockExclusive);
 
 public:
+    FrameLockTable();
+
     void lockShare(FrameID frameId, uint64_t timeoutMillis = 1000) const;
 
     void unlockShare(FrameID frameId) const;
