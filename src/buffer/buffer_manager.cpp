@@ -15,42 +15,45 @@ BufferManager::BufferManager() {
     }
 }
 
-std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockMode lockMode) noexcept(false) {
-    {
-        std::lock_guard pinGuard(pinMutex);
-        std::lock_guard bufferGuard(bufferPoolMutex);
-        // Cached pages retain their contents and dirty state between pins.
-        if (pageToFrameMapping.contains(pageId)) {
-            policy->accessPage(pageId);
-            auto frameId = pageToFrameMapping[pageId];
-            auto &frame = bufferPool.at(frameId);
-            pinnedPages.insert(pageId);
-            ++pinCounters[frameId];
+std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, const LockMode lockMode) noexcept(false) {
+    std::unique_lock metadataLock(metadataMutex);
+    // Cached pages retain their contents and dirty state between pins.
+    if (pageToFrameMapping.contains(pageId)) {
+        policy->accessPage(pageId);
+        auto frameId = pageToFrameMapping[pageId];
+        auto &frame = bufferPool.at(frameId);
+        pinnedPages.insert(pageId);
+        ++pinCounters[frameId];
+        metadataLock.unlock();
+
+        try {
             if (lockMode == EXCLUSIVE) {
                 frameLockTable->lockExclusive(frameId);
-                frame->exclusive = true;
+                frame->exclusive.store(true);
             } else {
                 frameLockTable->lockShare(frameId);
-                frame->exclusive = false;
+                frame->exclusive.store(false);
             }
             return frame;
+        } catch (std::exception &e) {
+            // rollback
+            std::unique_lock rollbackLock(metadataMutex);
+            if (--pinCounters[frameId] == 0) {
+                pinnedPages.erase(pageId);
+            }
+            throw;
         }
     }
-
-    FrameID frameId;
 
     if (policy->isCacheFull()) {
         evictPage();
     }
 
-    {
-        std::shared_lock guard(availableFramesMutex);
-        // find an available frame
-        if (availableFrames.empty()) {
-            throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
-        }
-        frameId = *availableFrames.begin();
+    // find an available frame
+    if (availableFrames.empty()) {
+        throw std::logic_error("Error: No frame available. This is likely a implementation logic error!");
     }
+    FrameID frameId = *availableFrames.begin();
 
     if (pageId.fileManagerPageId >= getNumPages(pageId.fileManagerId)) {
         storageManager->extend(pageId.fileManagerId, pageId.fileManagerPageId);
@@ -59,8 +62,6 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     std::unique_ptr<Page> page = storageManager->getPage(pageId);
 
     policy->accessPage(pageId);
-
-    std::lock_guard bufferGuard(bufferPoolMutex);
 
     if (lockMode == EXCLUSIVE) {
         frameLockTable->lockExclusive(frameId);
@@ -86,28 +87,34 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, LockM
     return bufferPool[frameId];
 }
 
-void BufferManager::unpinPage(PageID pageId) {
-    {
-        std::shared_lock guard(pinMutex);
-        if (!pinnedPages.contains(pageId)) {
-            throw std::logic_error("Error: page is not pinned");
-        }
+void BufferManager::unpinPage(const PageID &pageId) {
+    std::unique_lock guard(metadataMutex);
+    if (!pinnedPages.contains(pageId)) {
+        throw std::logic_error("Error: page is not pinned");
     }
 
-    auto frameId = pageToFrameMapping[pageId];
+    const auto frameId = pageToFrameMapping[pageId];
     auto &frame = bufferPool.at(frameId);
-
-    if (frame->exclusive) {
-        frameLockTable->unlockExclusive(frameId);
-    } else {
-        frameLockTable->unlockShare(frameId);
-    }
 
     --pinCounters[frameId];
 
     if (pinCounters[frameId] == 0) {
-        std::lock_guard guard(pinMutex);
         pinnedPages.erase(pageId);
+    }
+
+    guard.unlock();
+
+    try {
+        if (frame->exclusive) {
+            frameLockTable->unlockExclusive(frameId);
+        } else {
+            frameLockTable->unlockShare(frameId);
+        }
+    } catch (std::exception&) {
+        // rollback
+        std::unique_lock rollbackGuard(metadataMutex);
+        ++pinCounters[frameId];
+        pinnedPages.insert(pageId);
     }
 }
 
@@ -115,33 +122,31 @@ size_t BufferManager::getNumPages(const std::string &fileManagerId) const {
     return storageManager->getNumPages(fileManagerId);
 }
 
-void BufferManager::flushPage(PageID pageId) {
+void BufferManager::flushPage(const PageID &pageId) {
+    std::shared_lock guard(metadataMutex);
     auto frameId = pageToFrameMapping[pageId];
     auto &frame = bufferPool[frameId];
     storageManager->flushPage(pageId, *frame->page);
 }
 
 void BufferManager::evictPage() {
+    std::unique_lock guard(metadataMutex);
     auto pageToEvict = policy->selectPageToEvict(pinnedPages);
     if (pageToEvict == INVALID_PAGE_ID) {
         throw std::logic_error("Error: Cannot find page to evict");
     }
 
-    std::unique_lock pageToFrameGuard(pageToFrameMappingMutex);
-
     if (!pageToFrameMapping.contains(pageToEvict)) {
         return;
     }
 
-    auto frameId = pageToFrameMapping[pageToEvict];
-    std::shared_lock bufferGuard(bufferPoolMutex);
-    auto &frame = bufferPool.at(frameId);
+    const auto frameId = pageToFrameMapping[pageToEvict];
+    const auto &frame = bufferPool.at(frameId);
     if (frame->isDirty) {
         flushPage(pageToEvict);
     }
     pageToFrameMapping.erase(pageToEvict);
     frame->reset();
-    std::unique_lock availableFramesGuard(availableFramesMutex);
     availableFrames.insert(frameId);
 }
 
@@ -149,7 +154,7 @@ void BufferManager::registerFileManager(const std::string &fileManagerId, const 
     storageManager->registerFileManager(fileManagerId, filePath);
 }
 
-bool BufferManager::isPinned(PageID pageId) const {
-    std::shared_lock pinnedPagesGuard(pinMutex);
+bool BufferManager::isPinned(const PageID &pageId) const {
+    std::shared_lock guard(metadataMutex);
     return pinnedPages.contains(pageId);
 }

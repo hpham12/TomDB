@@ -4,6 +4,8 @@
 
 #include "buffer/frame_lock_table.h"
 
+#include <chrono>
+
 FrameLockTable::FrameLockTable() {
     for (auto i = 0; i  < MAX_CACHED_PAGES; i++) {
         ownerShipInfo[i] = std::make_unique<OwnershipInfo>();
@@ -16,10 +18,10 @@ void FrameLockTable::lockShare(const FrameID frameId, const uint64_t timeoutMill
     auto &ownership = ownerShipInfo[frameId];
 
     std::unique_lock lock(ownership->mutex);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMillis);
     while (ownership->exclusive) {
-        auto status = ownership->exclusiveCV.wait_for(lock, std::chrono::milliseconds(timeoutMillis));
-        if (status == std::cv_status::timeout) {
-            // TODO: Create exception type for this
+        const auto status = ownership->stateChangedCV.wait_until(lock, deadline);
+        if (status == std::cv_status::timeout && ownership->exclusive) {
             throw std::logic_error("Frame lock timed out");
         }
     }
@@ -33,19 +35,11 @@ void FrameLockTable::lockExclusive(const FrameID frameId, const uint64_t timeout
 
     std::unique_lock lock(ownership->mutex);
 
-    while (ownership->exclusive) {
-        auto status = ownership->exclusiveCV.wait_for(lock, std::chrono::milliseconds(timeoutMillis/2));
-
-        if (status == std::cv_status::timeout) {
-            // TODO: Create exception type for this
-            throw std::logic_error("Frame lock timed out");
-        }
-    }
-
-    while (ownership->sharedCounts > 0) {
-        auto status = ownership->shareCountCv.wait_for(lock, std::chrono::milliseconds(timeoutMillis/2));
-        if (status == std::cv_status::timeout) {
-            // TODO: Create exception type for this
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMillis);
+    while (ownership->exclusive || ownership->sharedCounts > 0) {
+        const auto status = ownership->stateChangedCV.wait_until(lock, deadline);
+        if (status == std::cv_status::timeout &&
+            (ownership->exclusive || ownership->sharedCounts > 0)) {
             throw std::logic_error("Frame lock timed out");
         }
     }
@@ -64,7 +58,7 @@ void FrameLockTable::unlockShare(const FrameID frameId) const {
     }
     ownership->sharedCounts--;
     if (ownership->sharedCounts == 0) {
-        ownership->shareCountCv.notify_all();
+        ownership->stateChangedCV.notify_all();
     }
 }
 
@@ -78,7 +72,7 @@ void FrameLockTable::unlockExclusive(const FrameID frameId) const {
         throw std::logic_error("frame is shared and cannot be unlocked as exclusive entity");
     }
     ownership->exclusive = false;
-    ownership->exclusiveCV.notify_all();
+    ownership->stateChangedCV.notify_all();
 }
 
 void FrameLockTable::validateFrameId(const FrameID &frameId) {

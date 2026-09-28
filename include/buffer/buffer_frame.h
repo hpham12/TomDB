@@ -4,6 +4,7 @@
 
 #ifndef TOMDB_BUFFER_FRAME_H
 #define TOMDB_BUFFER_FRAME_H
+#include <atomic>
 #include <memory>
 
 #include "commons.h"
@@ -14,7 +15,7 @@ class BufferFrame {
     PageID pageId = INVALID_PAGE_ID;
     FrameID frameId = INVALID_FRAME_ID;
     bool isDirty = false;
-    bool exclusive = false;
+    std::atomic<bool> exclusive = std::atomic(false);
 
     friend class BufferManager;
 

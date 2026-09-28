@@ -18,8 +18,7 @@ class OwnershipInfo {
     uint16_t sharedCounts = 0;
     bool exclusive = false;
     mutable std::mutex mutex;
-    std::condition_variable exclusiveCV;
-    std::condition_variable shareCountCv;
+    std::condition_variable stateChangedCV;
 
     FRIEND_TEST(FrameLockTableTest, LockShare);
     FRIEND_TEST(FrameLockTableTest, LockShareTimeout);

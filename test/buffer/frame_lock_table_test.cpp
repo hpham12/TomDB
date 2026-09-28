@@ -5,6 +5,9 @@
 #include "buffer/frame_lock_table.h"
 
 #include <gtest/gtest.h>
+#include <barrier>
+#include <thread>
+#include <vector>
 
 TEST(FrameLockTableTest, LockShare) {
     const FrameLockTable frameLockTable;
@@ -115,81 +118,86 @@ TEST(FrameLockTableTest, ValidateFrameId) {
     ASSERT_THROW(FrameLockTable::validateFrameId(MAX_CACHED_PAGES + 1), std::out_of_range);
 }
 
-TEST(FrameLockTableTest, UnlockExclusiveWakesUpWaitingThread) {
-    FrameLockTable frameLockTable;
-
-    std::thread t([&]() {
-        frameLockTable.lockExclusive(1, 500);
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        frameLockTable.unlockExclusive(1);
-    });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    ASSERT_NO_THROW(frameLockTable.lockExclusive(1, 500));
-    t.join();
-}
-
-TEST(FrameLockTableTest, UnlockShareWakesUpWaitingThread) {
-    FrameLockTable frameLockTable;
-    bool exceptionOcurred = false;
-
-    auto lockShare = [&]() {
-        try {
-            frameLockTable.lockShare(1, 500);
-            frameLockTable.unlockShare(1);
-        } catch (std::exception &e) {
-            exceptionOcurred = true;
-        }
-    };
-
-    std::thread t1(lockShare);
-
-    std::thread t2(lockShare);
-
-    std::thread t3(lockShare);
-
-    std::thread t4([&]() {
-        try {
-            frameLockTable.lockExclusive(1, 500);
-            frameLockTable.unlockExclusive(1);
-        } catch (std::exception &e) {
-            exceptionOcurred = true;
-        }
-    });
-
-    t1.join();
-    t2.join();
-    t3.join();
-    t4.join();
-    ASSERT_FALSE(exceptionOcurred);
-}
-
 TEST(FrameLockTableTest, LockShareWaitsForExclusive) {
     FrameLockTable frameLockTable;
-    bool exceptionOccurred = false;
+    frameLockTable.lockExclusive(1);
 
-    std::thread t1([&]() {
-        try {
-            frameLockTable.lockShare(1, 500);
-            frameLockTable.unlockShare(1);
-        } catch (std::logic_error &e) {
-            exceptionOccurred = true;
-        }
-    });
+    int readerCount = 8;
+    std::barrier start(readerCount + 1);
+    std::atomic<int> activeReaders{0};
+    std::atomic<int> completed{0};
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> writers;
+
+    for (int i = 0; i < readerCount; ++i) {
+        writers.emplace_back([&] {
+            start.arrive_and_wait();
+            try {
+                frameLockTable.lockShare(1, 2000);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                --activeReaders;
+                frameLockTable.unlockShare(1);
+                ++completed;
+            } catch (const std::exception &) {
+                failed = true;
+            }
+        });
+    }
+
+    start.arrive_and_wait();
+
+    // Give the readers opportunity to wait behind the initial reader.
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    frameLockTable.unlockExclusive(1);
+    for (auto &reader : writers) {
+        reader.join();
+    }
+
+    EXPECT_FALSE(failed);
+    EXPECT_EQ(completed, readerCount);
+}
 
 
-    std::thread t4([&]() {
-        try {
-            frameLockTable.lockExclusive(1, 500);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            frameLockTable.unlockExclusive(1);
-        } catch (std::logic_error &e) {
-            exceptionOccurred = true;
-        }
-    });
+TEST(FrameLockTableTest, WaitingWritersRemainExclusiveAfterLastReaderReleases) {
+    FrameLockTable frameLockTable;
+    frameLockTable.lockShare(1);
 
-    t1.join();
-    t4.join();
+    int writerCount = 8;
+    std::barrier start(writerCount + 1);
+    std::atomic<int> activeWriters{0};
+    std::atomic<int> completed{0};
+    std::atomic<bool> overlap{false};
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> writers;
 
-    ASSERT_FALSE(exceptionOccurred);
+    for (int i = 0; i < writerCount; ++i) {
+        writers.emplace_back([&] {
+            start.arrive_and_wait();
+            try {
+                frameLockTable.lockExclusive(1, 2000);
+                if (activeWriters.fetch_add(1) != 0) {
+                    overlap = true;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                --activeWriters;
+                frameLockTable.unlockExclusive(1);
+                ++completed;
+            } catch (const std::exception &) {
+                failed = true;
+            }
+        });
+    }
+
+    start.arrive_and_wait();
+
+    // Give the writers opportunity to wait behind the initial reader.
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    frameLockTable.unlockShare(1);
+    for (auto &writer : writers) {
+        writer.join();
+    }
+
+    EXPECT_FALSE(overlap);
+    EXPECT_FALSE(failed);
+    EXPECT_EQ(completed, writerCount);
 }

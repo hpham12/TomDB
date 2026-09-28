@@ -24,21 +24,12 @@ class BufferManager {
     // a vector containing buffer frame cached in memory
     std::vector<std::unique_ptr<BufferFrame>> bufferPool;
 
-    // mutex to guard the buffer pool
-    mutable std::shared_mutex bufferPoolMutex;
-
     // pages that are pinned (locked). Those pages will not be evicted by policy
     std::unordered_set<PageID> pinnedPages;
-
-    // mutex to guard the pinnedPages
-    mutable std::shared_mutex pinMutex;
 
     // map pageId to frameId, where frameId is the index within the bufferPool.
     // As long as the mapping exist it is guaranteed that the page is cached
     std::unordered_map<PageID, FrameID> pageToFrameMapping;
-
-    // mutex to guard the pinnedPages
-    mutable std::shared_mutex pageToFrameMappingMutex;
 
     // cache eviction policy
     std::unique_ptr<Policy> policy = std::make_unique<TwoQPolicy>();
@@ -46,17 +37,14 @@ class BufferManager {
     // frames available to be taken
     std::unordered_set<FrameID> availableFrames;
 
-    // mutex to guard the availableFrames
-    mutable std::shared_mutex availableFramesMutex;
-
     std::unique_ptr<StorageManager> storageManager = std::make_unique<StorageManager>();
     // std::unique_ptr<LockTable> lockTable;
 
     // An array of atomic counters to track who is using a frame
     std::array<std::atomic<uint16_t>, MAX_CACHED_PAGES> pinCounters{};
 
-    // mutex to guard the pinCounters
-    mutable std::shared_mutex pinCountersMutex;
+    // mutex to guard all metadata updates (bufferPool, pageToFrameMapping, pinnedPages,...)
+    mutable std::shared_mutex metadataMutex;
 
     std::unique_ptr<FrameLockTable> frameLockTable = std::make_unique<FrameLockTable>();
 
@@ -70,11 +58,11 @@ class BufferManager {
 public:
     BufferManager();
     std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);
-    void unpinPage(PageID pageId);
-    void flushPage(PageID pageId);
+    void unpinPage(const PageID &pageId);
+    void flushPage(const PageID &pageId);
     size_t getNumPages(const std::string& fileManagerId) const;
     void registerFileManager(const std::string& fileManagerId, const std::string& filePath) const;
-    bool isPinned(PageID pageId) const;
+    bool isPinned(const PageID &pageId) const;
 };
 
 #endif //TOMDB_BUFFER_MANAGER_H
