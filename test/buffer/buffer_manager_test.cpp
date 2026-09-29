@@ -120,6 +120,62 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     ASSERT_EQ(slot->size, 123456);
 }
 
+TEST_F(BufferManagerTest, ExclusivePinOnAlreadyPinnedSharedPage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+
+    // page is current pinned in shared mode, so the exclusive request will timeout
+    ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+}
+
+TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedExclusivePage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+
+    // page is current pinned in exclusive mode, so the shared request will timeout
+    ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+}
+
+TEST_F(BufferManagerTest, ExclusivePinOnAlreadyPinnedExclusivePage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+
+    // page is current pinned in exclusive mode, so the other exclusive request will timeout
+    ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+}
+
+TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedSharedPage) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+
+    // page is current pinned in exclusive mode, so the shared request will timeout
+    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+}
+
 TEST_F(BufferManagerTest, MultiplePinsAndUnpins) {
     BufferManager bm;
 
