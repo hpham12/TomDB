@@ -123,14 +123,12 @@ size_t BufferManager::getNumPages(const std::string &fileManagerId) const {
 }
 
 void BufferManager::flushPage(const PageID &pageId) {
-    std::shared_lock guard(metadataMutex);
     auto frameId = pageToFrameMapping[pageId];
     auto &frame = bufferPool[frameId];
     storageManager->flushPage(pageId, *frame->page);
 }
 
 void BufferManager::evictPage() {
-    std::unique_lock guard(metadataMutex);
     auto pageToEvict = policy->selectPageToEvict(pinnedPages);
     if (pageToEvict == INVALID_PAGE_ID) {
         throw std::logic_error("Error: Cannot find page to evict");
