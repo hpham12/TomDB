@@ -21,7 +21,8 @@ class BufferFrame {
 
     FRIEND_TEST(BufferManagerTest, EvictPage);
     FRIEND_TEST(BufferFrameTest, Reset);
-
+    FRIEND_TEST(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame);
+    FRIEND_TEST(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame);
 public:
     std::unique_ptr<Page> page = nullptr;
     BufferFrame() = default;

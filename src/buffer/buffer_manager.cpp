@@ -114,6 +114,7 @@ void BufferManager::unpinPage(const PageID &pageId) {
         std::unique_lock rollbackGuard(metadataMutex);
         ++pinCounters[frameId];
         pinnedPages.insert(pageId);
+        throw;
     }
 }
 

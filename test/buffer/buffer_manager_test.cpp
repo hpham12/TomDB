@@ -243,6 +243,54 @@ TEST_F(BufferManagerTest, SharedPinUncachedPageRollbackWhenFailedToGetFrameLock)
     ASSERT_TRUE(bm.pinnedPages.empty());
 }
 
+TEST_F(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    bm.pinPage(pageId, SHARED);
+
+    auto frameId = bm.pageToFrameMapping[pageId];
+    auto &frame = bm.bufferPool.at(frameId);
+    // flip the frame exclusivity
+    frame->exclusive.store(true);
+
+    ASSERT_ANY_THROW(bm.unpinPage(pageId));
+
+    ASSERT_TRUE(bm.pinnedPages.contains(pageId));
+
+    ASSERT_EQ(bm.pinCounters[frameId], 1);
+}
+
+TEST_F(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    bm.pinPage(pageId, EXCLUSIVE);
+
+    auto frameId = bm.pageToFrameMapping[pageId];
+    auto &frame = bm.bufferPool.at(frameId);
+    // flip the frame exclusivity
+    frame->exclusive.store(false);
+
+    ASSERT_ANY_THROW(bm.unpinPage(pageId));
+
+    ASSERT_TRUE(bm.pinnedPages.contains(pageId));
+
+    ASSERT_EQ(bm.pinCounters[frameId], 1);
+}
+
 TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedSharedPage) {
     BufferManager bm;
 

@@ -59,6 +59,8 @@ class BufferManager {
     FRIEND_TEST(BufferManagerTest, SharedPinCachedPageRollbackWhenFailedToGetFrameLock);
     FRIEND_TEST(BufferManagerTest, ExclusivePinUncachedPageRollbackWhenFailedToGetFrameLock);
     FRIEND_TEST(BufferManagerTest, SharedPinUncachedPageRollbackWhenFailedToGetFrameLock);
+    FRIEND_TEST(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame);
+    FRIEND_TEST(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame);
 public:
     BufferManager();
     std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);
