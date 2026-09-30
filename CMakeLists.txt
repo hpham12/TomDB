@@ -41,6 +41,7 @@ add_library(tomdb_lib
         src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
         src/buffer/buffer_frame.cpp
+        src/buffer/frame_lock_table.cpp
 )
 
 target_include_directories(tomdb_lib
@@ -89,6 +90,7 @@ add_executable(tomdb
         src/buffer/buffer_manager.cpp
         include/buffer/buffer_frame.h
         src/buffer/buffer_frame.cpp
+        include/buffer/frame_lock_table.h
 )
 
 target_link_libraries(tomdb
@@ -117,11 +119,13 @@ add_executable(tomdb_tests
         test/buffer/buffer_manager_test.cpp
         test/test_utils.h
         test/buffer/buffer_frame_test.cpp
+        test/buffer/frame_lock_table_test.cpp
 )
 
 target_link_libraries(tomdb_tests
         PRIVATE
         tomdb_lib
+        GTest::gmock
         GTest::gtest_main
 )
 

@@ -4,6 +4,7 @@
 
 #ifndef TOMDB_BUFFER_FRAME_H
 #define TOMDB_BUFFER_FRAME_H
+#include <atomic>
 #include <memory>
 
 #include "commons.h"
@@ -14,11 +15,14 @@ class BufferFrame {
     PageID pageId = INVALID_PAGE_ID;
     FrameID frameId = INVALID_FRAME_ID;
     bool isDirty = false;
+    std::atomic<bool> exclusive = std::atomic(false);
 
     friend class BufferManager;
 
     FRIEND_TEST(BufferManagerTest, EvictPage);
-
+    FRIEND_TEST(BufferFrameTest, Reset);
+    FRIEND_TEST(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame);
+    FRIEND_TEST(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame);
 public:
     std::unique_ptr<Page> page = nullptr;
     BufferFrame() = default;

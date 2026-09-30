@@ -2,7 +2,7 @@
 // Created by Hieu Pham on 8/31/26.
 //
 
-#include "../../include/records/page.h"
+#include "records/page.h"
 
 #include <cstring>
 

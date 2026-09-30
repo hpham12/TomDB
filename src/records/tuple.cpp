@@ -2,7 +2,7 @@
 // Created by Hieu Pham on 9/3/26.
 //
 
-#include "../../include/records/tuple.h"
+#include "records/tuple.h"
 #include <sstream>
 
 void Tuple::addField(std::unique_ptr<Field> field) {

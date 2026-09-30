@@ -13,6 +13,7 @@ void BufferFrame::reset() {
     pageId = INVALID_PAGE_ID;
     frameId = INVALID_FRAME_ID;
     isDirty = false;
+    exclusive.store(false);
 }
 
 bool BufferFrame::isPageDirty() const {
