@@ -125,6 +125,7 @@ add_executable(tomdb_tests
 target_link_libraries(tomdb_tests
         PRIVATE
         tomdb_lib
+        GTest::gmock
         GTest::gtest_main
 )
 

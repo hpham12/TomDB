@@ -6,6 +6,7 @@
 
 #include <random>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 class BufferManagerTest : public testing::Test {
 protected:
@@ -156,10 +157,90 @@ TEST_F(BufferManagerTest, ExclusivePinOnAlreadyPinnedExclusivePage) {
 
     bm.registerFileManager("fm", randomFilePath);
 
-    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    ASSERT_NO_THROW(bm.pinPage(pageId, EXCLUSIVE));
 
     // page is current pinned in exclusive mode, so the other exclusive request will timeout
-    ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+    ASSERT_ANY_THROW(bm.pinPage(pageId, EXCLUSIVE));
+}
+
+TEST_F(BufferManagerTest, ExclusivePinCachedPageRollbackWhenFailedToGetFrameLock) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    bm.pageToFrameMapping[pageId] = 0;
+    bm.frameLockTable->lockExclusive(0);
+
+    ASSERT_ANY_THROW(bm.pinPage(pageId, EXCLUSIVE));
+
+    ASSERT_TRUE(bm.pinnedPages.empty());
+}
+
+TEST_F(BufferManagerTest, SharedPinCachedPageRollbackWhenFailedToGetFrameLock) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    bm.pageToFrameMapping[pageId] = 0;
+    bm.frameLockTable->lockExclusive(0);
+
+    ASSERT_ANY_THROW(bm.pinPage(pageId, SHARED));
+
+    ASSERT_TRUE(bm.pinnedPages.empty());
+}
+
+TEST_F(BufferManagerTest, ExclusivePinUncachedPageRollbackWhenFailedToGetFrameLock) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    // force available frame to contain only 0
+    bm.availableFrames.clear();
+    bm.availableFrames.insert(0);
+
+    bm.frameLockTable->lockExclusive(0);
+
+    ASSERT_ANY_THROW(bm.pinPage(pageId, EXCLUSIVE));
+
+    ASSERT_TRUE(bm.pinnedPages.empty());
+}
+
+TEST_F(BufferManagerTest, SharedPinUncachedPageRollbackWhenFailedToGetFrameLock) {
+    BufferManager bm;
+
+    auto randomFilePath = generateRandomFilePath();
+    filePaths.push_back(randomFilePath);
+
+    bm.registerFileManager("fm", randomFilePath);
+
+    PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
+
+    // force available frame to contain only 0
+    bm.availableFrames.clear();
+    bm.availableFrames.insert(0);
+
+    bm.frameLockTable->lockExclusive(0);
+
+    ASSERT_ANY_THROW(bm.pinPage(pageId, SHARED));
+
+    ASSERT_TRUE(bm.pinnedPages.empty());
 }
 
 TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedSharedPage) {

@@ -17,7 +17,6 @@ BufferManager::BufferManager() {
 
 std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, const LockMode lockMode) noexcept(false) {
     std::unique_lock metadataLock(metadataMutex);
-    // Cached pages retain their contents and dirty state between pins.
     if (pageToFrameMapping.contains(pageId)) {
         policy->accessPage(pageId);
         auto frameId = pageToFrameMapping[pageId];
