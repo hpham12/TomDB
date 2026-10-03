@@ -4,9 +4,9 @@
 #include "buffer/buffer_manager.h"
 #include "../test_utils.h"
 
-#include <random>
+#include <utility>
+#include <vector>
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 class BufferManagerTest : public testing::Test {
 protected:
@@ -43,8 +43,8 @@ TEST_F(BufferManagerTest, PinPage) {
     // buffer manager functionality test
     bm.registerFileManager("fm1", randomFilePath);
 
-    auto &page = bm.pinPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, SHARED)->page;
-    ASSERT_NE(page, nullptr);
+    auto page = bm.pinPage(PageID{.fileManagerId="fm1", .fileManagerPageId=0}, SHARED);
+    ASSERT_TRUE(page);
 
     Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
 
@@ -78,9 +78,10 @@ TEST_F(BufferManagerTest, PinPageWithnoEvictablePage) {
     bm.registerFileManager("fm", randomFilePath);
 
     // load many pages so the cache is full
+    std::vector<PageGuard> guards;
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
-        bm.pinPage(pageId, SHARED);
+        guards.push_back(bm.pinPage(pageId, SHARED));
     }
 
     ASSERT_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=10000}, SHARED), std::logic_error);
@@ -110,9 +111,9 @@ TEST_F(BufferManagerTest, PinExistingPinnedPage) {
     // buffer manager functionality test
     bm.registerFileManager("fm", randomFilePath);
 
-    bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
-    auto &page = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED)->page;
-    ASSERT_NE(page, nullptr);
+    auto firstPin = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
+    auto page = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
+    ASSERT_TRUE(page);
 
     Slot* slot = reinterpret_cast<Slot*>(page->pageData.get());
 
@@ -129,7 +130,7 @@ TEST_F(BufferManagerTest, ExclusivePinOnAlreadyPinnedSharedPage) {
 
     bm.registerFileManager("fm", randomFilePath);
 
-    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+    auto sharedGuard = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
 
     // page is current pinned in shared mode, so the exclusive request will timeout
     ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
@@ -143,7 +144,7 @@ TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedExclusivePage) {
 
     bm.registerFileManager("fm", randomFilePath);
 
-    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE));
+    auto exclusiveGuard = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, EXCLUSIVE);
 
     // page is current pinned in exclusive mode, so the shared request will timeout
     ASSERT_ANY_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
@@ -159,7 +160,7 @@ TEST_F(BufferManagerTest, ExclusivePinOnAlreadyPinnedExclusivePage) {
 
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
 
-    ASSERT_NO_THROW(bm.pinPage(pageId, EXCLUSIVE));
+    auto exclusiveGuard = bm.pinPage(pageId, EXCLUSIVE);
 
     // page is current pinned in exclusive mode, so the other exclusive request will timeout
     ASSERT_ANY_THROW(bm.pinPage(pageId, EXCLUSIVE));
@@ -253,14 +254,15 @@ TEST_F(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame) {
 
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
 
-    bm.pinPage(pageId, SHARED);
+    auto guard = bm.pinPage(pageId, SHARED);
 
     auto frameId = bm.pageToFrameMapping[pageId];
     auto &frame = bm.bufferPool.at(frameId);
     // flip the frame exclusivity
     frame->exclusive.store(true);
 
-    ASSERT_ANY_THROW(bm.unpinPage(pageId));
+    EXPECT_ANY_THROW(bm.unpinPage(pageId));
+    frame->exclusive.store(false);
 
     ASSERT_TRUE(bm.pinnedPages.contains(pageId));
 
@@ -277,14 +279,15 @@ TEST_F(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame) {
 
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
 
-    bm.pinPage(pageId, EXCLUSIVE);
+    auto guard = bm.pinPage(pageId, EXCLUSIVE);
 
     auto frameId = bm.pageToFrameMapping[pageId];
     auto &frame = bm.bufferPool.at(frameId);
     // flip the frame exclusivity
     frame->exclusive.store(false);
 
-    ASSERT_ANY_THROW(bm.unpinPage(pageId));
+    EXPECT_ANY_THROW(bm.unpinPage(pageId));
+    frame->exclusive.store(true);
 
     ASSERT_TRUE(bm.pinnedPages.contains(pageId));
 
@@ -299,10 +302,11 @@ TEST_F(BufferManagerTest, SharePinOnAlreadyPinnedSharedPage) {
 
     bm.registerFileManager("fm", randomFilePath);
 
-    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+    auto first = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
 
-    // page is current pinned in exclusive mode, so the shared request will timeout
-    ASSERT_NO_THROW(bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED));
+    // Both shared guards can hold the same page concurrently.
+    auto second = bm.pinPage(PageID{.fileManagerId="fm", .fileManagerPageId=0}, SHARED);
+    ASSERT_EQ(first.getFrame(), second.getFrame());
 }
 
 TEST_F(BufferManagerTest, MultiplePinsAndUnpins) {
@@ -313,15 +317,14 @@ TEST_F(BufferManagerTest, MultiplePinsAndUnpins) {
 
     bm.registerFileManager("fm", randomFilePath);
     auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
-    bm.pinPage(pageId, SHARED);
-    bm.pinPage(pageId, SHARED);
-
-    ASSERT_TRUE(bm.isPinned(pageId));
-
-    bm.unpinPage(pageId);
-    ASSERT_TRUE(bm.isPinned(pageId));
-
-    bm.unpinPage(pageId);
+    {
+        auto first = bm.pinPage(pageId, SHARED);
+        {
+            auto second = bm.pinPage(pageId, SHARED);
+            ASSERT_TRUE(bm.isPinned(pageId));
+        }
+        ASSERT_TRUE(bm.isPinned(pageId));
+    }
     ASSERT_FALSE(bm.isPinned(pageId));
 }
 
@@ -346,15 +349,14 @@ TEST_F(BufferManagerTest, UnpinPage) {
 
     bm.registerFileManager("fm", randomFilePath);
     auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
-    bm.pinPage(pageId, SHARED);
-
-    ASSERT_TRUE(bm.isPinned(pageId));
-
-    bm.unpinPage(pageId);
+    {
+        auto guard = bm.pinPage(pageId, SHARED);
+        ASSERT_TRUE(bm.isPinned(pageId));
+    }
     ASSERT_FALSE(bm.isPinned(pageId));
 }
 
-TEST_F(BufferManagerTest, Unpin) {
+TEST_F(BufferManagerTest, MoveConstructionTransfersPin) {
     BufferManager bm;
 
     auto randomFilePath = generateRandomFilePath();
@@ -362,11 +364,16 @@ TEST_F(BufferManagerTest, Unpin) {
 
     bm.registerFileManager("fm", randomFilePath);
     auto pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
-    bm.pinPage(pageId, SHARED);
-
-    ASSERT_TRUE(bm.isPinned(pageId));
-
-    bm.unpinPage(pageId);
+    {
+        auto guard = bm.pinPage(pageId, SHARED);
+        {
+            auto moved = std::move(guard);
+            ASSERT_FALSE(guard);
+            ASSERT_TRUE(moved);
+            ASSERT_TRUE(bm.isPinned(pageId));
+        }
+        ASSERT_FALSE(bm.isPinned(pageId));
+    }
     ASSERT_FALSE(bm.isPinned(pageId));
 }
 
@@ -416,14 +423,15 @@ TEST_F(BufferManagerTest, EvictPage) {
     bm.registerFileManager("fm", randomFilePath);
 
     // load multiple pages
+    std::vector<PageGuard> guards;
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
-        bm.pinPage(pageId, SHARED);
+        guards.push_back(bm.pinPage(pageId, SHARED));
     }
 
     PageID firstPageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
 
-    bm.unpinPage(firstPageId);
+    guards.erase(guards.begin());
 
     ASSERT_TRUE(bm.pageToFrameMapping.contains(firstPageId));
     ASSERT_TRUE(bm.availableFrames.empty());
@@ -451,9 +459,10 @@ TEST_F(BufferManagerTest, EvictPageFailsWithNoEvictablePage) {
     bm.registerFileManager("fm", randomFilePath);
 
     // load multiple pages
+    std::vector<PageGuard> guards;
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
-        bm.pinPage(pageId, SHARED);
+        guards.push_back(bm.pinPage(pageId, SHARED));
     }
 
     ASSERT_THROW(bm.evictPage(), std::logic_error);
@@ -468,9 +477,9 @@ TEST_F(BufferManagerTest, EvictPageNoopWhenMappingDoesNotContainPage) {
     bm.registerFileManager("fm", randomFilePath);
 
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
-    bm.pinPage(pageId, SHARED);
-
-    bm.unpinPage(pageId);
+    {
+        auto guard = bm.pinPage(pageId, SHARED);
+    }
     bm.pageToFrameMapping.erase(pageId);
     ASSERT_NO_THROW(bm.evictPage());
 }
@@ -495,27 +504,26 @@ TEST_F(BufferManagerTest, EvictPageFlushesDirtyPage) {
 
     bm.registerFileManager("fm", randomFilePath);
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(0)};
-    unique_ptr<BufferFrame> &frame = bm.pinPage(pageId, SHARED);
-    auto &page = frame->page;
+    {
+        auto page = bm.pinPage(pageId, EXCLUSIVE);
 
-    Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
+        Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
 
-    ASSERT_EQ(slots[2].empty, true);
-    ASSERT_EQ(slots[2].offset, INVALID_VALUE);
-    ASSERT_EQ(slots[2].size, INVALID_VALUE);
+        ASSERT_EQ(slots[2].empty, true);
+        ASSERT_EQ(slots[2].offset, INVALID_VALUE);
+        ASSERT_EQ(slots[2].size, INVALID_VALUE);
 
-    slots[2].empty = false;
-    slots[2].offset = 123;
-    slots[2].size = 123456;
+        slots[2].empty = false;
+        slots[2].offset = 123;
+        slots[2].size = 123456;
 
-    frame->markDirty();
-    bm.unpinPage(pageId);
+        page.markDirty();
+    }
     bm.evictPage();
 
-    unique_ptr<BufferFrame> &updatedFrame = bm.pinPage(pageId, SHARED);
-    auto &updatedPage = updatedFrame->page;
+    auto updatedPage = bm.pinPage(pageId, SHARED);
 
-    slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
+    auto* slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
 
     ASSERT_EQ(slots[2].empty, false);
     ASSERT_EQ(slots[2].offset, 123);
@@ -530,24 +538,25 @@ TEST_F(BufferManagerTest, FlushPage) {
     bm.registerFileManager("fm", randomFilePath);
     PageID pageId = PageID{.fileManagerId="fm", .fileManagerPageId=0};
 
-    auto &page = bm.pinPage(pageId, SHARED)->page;
+    {
+        auto page = bm.pinPage(pageId, EXCLUSIVE);
 
-    Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
+        Slot* slots = reinterpret_cast<Slot*>(page->pageData.get());
 
-    ASSERT_EQ(slots[2].empty, true);
-    ASSERT_EQ(slots[2].offset, INVALID_VALUE);
-    ASSERT_EQ(slots[2].size, INVALID_VALUE);
+        ASSERT_EQ(slots[2].empty, true);
+        ASSERT_EQ(slots[2].offset, INVALID_VALUE);
+        ASSERT_EQ(slots[2].size, INVALID_VALUE);
 
-    slots[2].empty = false;
-    slots[2].offset = 123;
-    slots[2].size = 123456;
+        slots[2].empty = false;
+        slots[2].offset = 123;
+        slots[2].size = 123456;
 
-    bm.flushPage(pageId);
+        bm.flushPage(pageId);
 
-    bm.unpinPage(pageId);
+    }
     FileManager reader(randomFilePath);
     auto updatedPage = reader.load(0);
-    slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
+    auto* slots = reinterpret_cast<Slot*>(updatedPage->pageData.get());
 
     ASSERT_EQ(slots[2].empty, false);
     ASSERT_EQ(slots[2].offset, 123);
@@ -558,28 +567,24 @@ TEST_F(BufferManagerTest, RepinningDirtyCachedPagePreservesChanges) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();
     filePaths.push_back(randomFilePath);
-
     bm.registerFileManager("fm", randomFilePath);
     PageID pageId{.fileManagerId="fm", .fileManagerPageId=0};
 
-    auto &frame = bm.pinPage(pageId, EXCLUSIVE);
-
-    auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(std::string("unflushed")));
-    ASSERT_EQ(frame->page->addTuple(std::move(tuple), nullptr), 0);
-
-    frame->markDirty();
-
-    const std::string expected(frame->page->pageData.get(), PAGE_SIZE);
-
-    bm.unpinPage(pageId);
-    auto &updatedFrame = bm.pinPage(pageId, SHARED);
-
-    ASSERT_TRUE(bm.isPinned(pageId));
-    ASSERT_TRUE(updatedFrame->isPageDirty());
-    ASSERT_EQ(std::string(updatedFrame->page->pageData.get(), PAGE_SIZE), expected);
-
-    bm.unpinPage(pageId);
+    std::string expected;
+    {
+        auto page = bm.pinPage(pageId, EXCLUSIVE);
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(std::string("unflushed")));
+        ASSERT_EQ(page->addTuple(std::move(tuple), nullptr), 0);
+        page.markDirty();
+        expected.assign(page->pageData.get(), PAGE_SIZE);
+    }
+    {
+        auto page = bm.pinPage(pageId, SHARED);
+        ASSERT_TRUE(bm.isPinned(pageId));
+        ASSERT_TRUE(page.getFrame()->isPageDirty());
+        ASSERT_EQ(std::string(page->pageData.get(), PAGE_SIZE), expected);
+    }
     ASSERT_FALSE(bm.isPinned(pageId));
 }
 
@@ -587,37 +592,38 @@ TEST_F(BufferManagerTest, AutomaticEvictionPersistsDirtyVictimAndReusesFrame) {
     BufferManager bm;
     auto randomFilePath = generateRandomFilePath();
     filePaths.push_back(randomFilePath);
-
     bm.registerFileManager("fm", randomFilePath);
     PageID firstPageId{.fileManagerId="fm", .fileManagerPageId=0};
 
-    auto &frame = bm.pinPage(firstPageId, EXCLUSIVE);
-
-    auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(123));
-    ASSERT_EQ(frame->page->addTuple(std::move(tuple), nullptr), 0);
-
-    frame->markDirty();
-
-    const std::string expected(frame->page->pageData.get(), PAGE_SIZE);
-
-    // load remaining pages so the cache is full
-    for (size_t i = 1; i < MAX_CACHED_PAGES; i++) {
-        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
-        bm.pinPage(pageId, SHARED);
+    std::string expected;
+    FrameID originalFrameId;
+    {
+        auto page = bm.pinPage(firstPageId, EXCLUSIVE);
+        originalFrameId = page.getFrameId();
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(123));
+        ASSERT_EQ(page->addTuple(std::move(tuple), nullptr), 0);
+        page.markDirty();
+        expected.assign(page->pageData.get(), PAGE_SIZE);
     }
 
-    bm.unpinPage(firstPageId);
+    std::vector<PageGuard> guards;
+    for (size_t i = 1; i < MAX_CACHED_PAGES; i++) {
+        PageID pageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(i)};
+        guards.push_back(bm.pinPage(pageId, SHARED));
+    }
 
     PageID nextPageId{.fileManagerId="fm", .fileManagerPageId=static_cast<uint16_t>(MAX_CACHED_PAGES)};
-    auto &replacement = bm.pinPage(nextPageId, SHARED);
-    ASSERT_FALSE(replacement->isPageDirty());
+    {
+        auto replacement = bm.pinPage(nextPageId, SHARED);
+        ASSERT_EQ(replacement.getFrameId(), originalFrameId);
+        ASSERT_FALSE(replacement.getFrame()->isPageDirty());
+    }
 
     FileManager fileManager(randomFilePath);
     auto persistedPage = fileManager.load(0);
     ASSERT_EQ(std::string(persistedPage->pageData.get(), PAGE_SIZE), expected);
 
-    bm.unpinPage(nextPageId);
-    auto &updatedFrame = bm.pinPage(firstPageId, SHARED);
-    ASSERT_EQ(std::string(updatedFrame->page->pageData.get(), PAGE_SIZE), expected);
+    auto updatedPage = bm.pinPage(firstPageId, SHARED);
+    ASSERT_EQ(std::string(updatedPage->pageData.get(), PAGE_SIZE), expected);
 }

@@ -13,6 +13,7 @@
 #include <shared_mutex>
 
 #include "buffer_frame.h"
+#include "page_guard.h"
 #include "commons.h"
 #include "frame_lock_table.h"
 #include "policy.h"
@@ -63,7 +64,7 @@ class BufferManager {
     FRIEND_TEST(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame);
 public:
     BufferManager();
-    std::unique_ptr<BufferFrame> &pinPage(const PageID& pageId, LockMode lockMode);
+    PageGuard pinPage(const PageID& pageId, LockMode lockMode);
     void unpinPage(const PageID &pageId);
     void flushPage(const PageID &pageId);
     size_t getNumPages(const std::string& fileManagerId) const;

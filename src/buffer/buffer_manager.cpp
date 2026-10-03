@@ -15,7 +15,7 @@ BufferManager::BufferManager() {
     }
 }
 
-std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, const LockMode lockMode) noexcept(false) {
+PageGuard BufferManager::pinPage(const PageID &pageId, const LockMode lockMode) {
     std::unique_lock metadataLock(metadataMutex);
     if (pageToFrameMapping.contains(pageId)) {
         policy->accessPage(pageId);
@@ -33,7 +33,7 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, const
                 frameLockTable->lockShare(frameId);
                 frame->exclusive.store(false);
             }
-            return frame;
+            return {this, frame.get()};
         } catch (std::exception &e) {
             // rollback
             std::unique_lock rollbackLock(metadataMutex);
@@ -83,7 +83,7 @@ std::unique_ptr<BufferFrame> &BufferManager::pinPage(const PageID &pageId, const
 
     ++pinCounters[frameId];
 
-    return bufferPool[frameId];
+    return {this, bufferPool[frameId].get()};
 }
 
 void BufferManager::unpinPage(const PageID &pageId) {
