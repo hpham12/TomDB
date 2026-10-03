@@ -51,6 +51,8 @@ class BufferManager {
 
     void evictPage();
 
+    void unpinPage(const PageID &pageId);
+
     FRIEND_TEST(BufferManagerTest, EvictPage);
     FRIEND_TEST(BufferManagerTest, EvictPageFailsWithNoEvictablePage);
     FRIEND_TEST(BufferManagerTest, EvictPageFlushesDirtyPage);
@@ -62,10 +64,12 @@ class BufferManager {
     FRIEND_TEST(BufferManagerTest, SharedPinUncachedPageRollbackWhenFailedToGetFrameLock);
     FRIEND_TEST(BufferManagerTest, SharedUnpinPageRollbackWhenFailedToUnlockFrame);
     FRIEND_TEST(BufferManagerTest, ExclusiveUnpinPageRollbackWhenFailedToUnlockFrame);
+    FRIEND_TEST(BufferManagerTest, UnpinPageThatIsNotPinned);
+
+    friend class PageGuard;
 public:
     BufferManager();
     PageGuard pinPage(const PageID& pageId, LockMode lockMode);
-    void unpinPage(const PageID &pageId);
     void flushPage(const PageID &pageId);
     size_t getNumPages(const std::string& fileManagerId) const;
     void registerFileManager(const std::string& fileManagerId, const std::string& filePath) const;
