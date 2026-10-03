@@ -192,3 +192,21 @@ TEST(PageGuardTest, DestructorUnpinsAndMarksFrameDirty) {
     }
     std::filesystem::remove(filePath);
 }
+
+ TEST(PageGuardTest, UnpinFailureIsCaught) {
+     BufferFrame bufferFrame;
+     BufferManager bufferManager;
+     PageGuard page{&bufferManager, &bufferFrame};
+}
+
+TEST(PageGuardTest, EqualOperatorCompletesWhenUnpinFails) {
+    BufferFrame bufferFrame1;
+    BufferManager bufferManager1;
+    PageGuard page{&bufferManager1, &bufferFrame1};
+
+    BufferFrame bufferFrame2;
+    BufferManager bufferManager2;
+    PageGuard anotherPage{&bufferManager2, &bufferFrame2};
+
+    ASSERT_NO_THROW(page = std::move(anotherPage));
+}
