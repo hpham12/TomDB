@@ -18,6 +18,7 @@ class BufferFrame {
     std::atomic<bool> exclusive = std::atomic(false);
 
     friend class BufferManager;
+    friend class PageGuard;
 
     FRIEND_TEST(BufferManagerTest, EvictPage);
     FRIEND_TEST(BufferFrameTest, Reset);
