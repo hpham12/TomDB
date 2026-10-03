@@ -3,6 +3,9 @@
 //
 
 #include "buffer/page_guard.h"
+
+#include <iostream>
+
 #include "buffer/buffer_manager.h"
 
 PageGuard::PageGuard(PageGuard &&pageGuard) noexcept {
@@ -25,7 +28,12 @@ PageGuard::~PageGuard() {
         if (isDirty) {
             bufferFrame->markDirty();
         }
-        this->bufferManager->unpinPage(bufferFrame->pageId);
+        try {
+            this->bufferManager->unpinPage(bufferFrame->pageId);
+        } catch (std::logic_error &e) {
+            // TODO: replace with proper logging in next phase
+            std::cerr << e.what() << '\n';
+        }
     }
 }
 
@@ -35,7 +43,12 @@ PageGuard &PageGuard::operator=(PageGuard&& pageGuard) noexcept {
             if (this->isDirty) {
                 this->bufferFrame->markDirty();
             }
-            this->bufferManager->unpinPage(this->getPageId());
+            try {
+                this->bufferManager->unpinPage(this->getPageId());
+            } catch (std::logic_error &e) {
+                // TODO: replace with proper logging in next phase
+                std::cerr << e.what() << '\n';
+            }
         }
 
         this->bufferFrame = pageGuard.bufferFrame;
