@@ -37,6 +37,8 @@ public:
      * <code>false</code> otherwise
      */
     bool deleteTuple(size_t index);
+
+    std::unique_ptr<Tuple> getTuple(size_t index);
 };
 
 #endif //TOMDB_PAGE_H

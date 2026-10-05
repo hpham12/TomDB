@@ -11,8 +11,6 @@
 #include "../records/page.h"
 
 class FileManager {
-
-private:
     size_t numPages = 0;
     std::fstream filestream;
 

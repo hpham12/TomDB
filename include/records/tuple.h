@@ -10,7 +10,6 @@
 #include "field.h"
 
 class Tuple {
-private:
     std::vector<std::unique_ptr<Field>> fields;
 
 public:
