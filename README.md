@@ -2,57 +2,28 @@
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=reliability_rating)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=reliability_rating)
 
 # TomDB
-Tom DB is a distributed relational database management system built for the purpose of learning about Database System implementation and Distributed System.
-It should not be used in any production system.
 
-## Table of Contents
-- [Development Setup](#development-setup)
-  - [MacOS - Apple Sillion](#macos---apple-silicon)
-- [High-Level Architecture](#high-level-architecture)
-- [Project Roadmap](#project-roadmap)
+TomDB is a learning project for database implementation and distributed systems, with the goal of building a distributed relational database. The current implementation includes records, slotted pages, file storage, and a buffer manager. It should not be used in production.
 
-## Development Setup
+## Documentation
 
-To avoid potential issues with different processor architectures or operating systems, development should be done
-inside the provider Docker container built from Ubuntu 26.04 LTS based image. See https://hub.docker.com/r/hpham99/tomdb
+- [Design overview and reading guide](docs/design/README.md): component relationships and a walkthrough of the storage engine.
+- [Development setup](docs/development.md): Docker, CLion, and debugging setup.
 
-This section guides you through setting up your local development setup with CLion.
-
-First, navigate to the root directory of TomDB, then build the container:
-```
-docker compose up -d
-```
-
-### MacOS - Apple Silicon
-Go to Settings > Build, Execution, Deployment > Docker, make the following setup:
-
-   ![step1.png](assets/local-setup/step1.png)
-
-Go to Toolchains, make the following setup:
-
-   ![step2.png](assets/local-setup/step2.png)
-
-Set debugger to **Rosetta GDB**
-
-   ![step3.png](assets/local-setup/step3.png)
-
-Setup Valgrind:
-
-  ![step4.png](assets/local-setup/step4.png)
-
-Then, you can run Valgrind using the profiler option
-
-  ![run-valgrind.png](assets/local-setup/run-valgrind.png)
+The design docs are grouped by [records](docs/design/records/fields-and-tuples.md), [storage](docs/design/storage/storage-manager.md), and [buffer management](docs/design/buffer/buffer-manager.md). They describe current behavior, ownership, tradeoffs, and implementation limits.
 
 ## High-Level Architecture
-![High-level-architecture.png](assets/high-level-arch.png)
+
+The diagram shows the broader architecture direction; the roadmap below distinguishes implemented components from planned work.
+
+![High-level architecture](assets/high-level-arch.png)
 
 ## Project Roadmap
 ### Storage engine
 ✅ Page, tuple, field \
 ✅ File manager \
 ✅ Storage manager \
-🚧 Buffer manager \
+✅ Buffer manager \
 ⏳ B-tree indexing
 
 ### Query layer
