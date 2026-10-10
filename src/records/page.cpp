@@ -5,6 +5,7 @@
 #include "records/page.h"
 
 #include <cstring>
+#include <sstream>
 
 // construct an empty page
 Page::Page() {
@@ -79,4 +80,25 @@ bool Page::deleteTuple(size_t index) {
     slots[index].empty = true;
 
     return true;
+}
+
+std::unique_ptr<Tuple> Page::getTuple(size_t index) {
+    if (index >= MAX_SLOTS) {
+        return nullptr;
+    }
+
+    auto slots = reinterpret_cast<Slot*>(pageData.get());
+
+    if (slots[index].empty) {
+        return nullptr;
+    }
+
+    std::istringstream iss(std::string(
+        pageData.get() + slots[index].offset,
+        slots[index].size
+    ));
+    
+    iss.seekg(0, std::ios::beg);
+
+    return Tuple::deserialize(iss);
 }

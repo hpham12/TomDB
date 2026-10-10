@@ -180,3 +180,40 @@ TEST(PageTest, ReusesDeletedSlotWithoutChangingNeighbor) {
     ASSERT_EQ(std::string(page.pageData.get() + slots[1].offset, slots[1].size), neighbor);
     ASSERT_FALSE(page.deleteTuple(MAX_SLOTS));
 }
+
+TEST(PageTest, GetTuple) {
+    Page page;
+    auto tuple = std::make_unique<Tuple>();
+
+    int i = 123456;
+    tuple->addField(std::make_unique<Field>(i));
+
+    float f = 123.456;
+    tuple->addField(std::make_unique<Field>(f));
+
+    std::string s = "Hello World";
+    tuple->addField(std::make_unique<Field>(s));
+
+    char *reason = nullptr;
+    page.addTuple(createLargeTestTuple(), reason);
+    page.addTuple(std::move(tuple), reason);
+    page.addTuple(createSmallTestTuple(), reason);
+
+    auto retrievedTuple = page.getTuple(1);
+
+    auto intField = retrievedTuple->getField(0);
+    auto floatField = retrievedTuple->getField(1);
+    auto stringField = retrievedTuple->getField(2);
+
+    EXPECT_EQ(intField->type, FieldType::INTEGER);
+    EXPECT_EQ(intField->size, sizeof(int));
+    EXPECT_EQ(*reinterpret_cast<int*>(intField->value.get()), i);
+
+    EXPECT_EQ(floatField->type, FieldType::FLOAT);
+    EXPECT_EQ(floatField->size, sizeof(int));
+    EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(floatField->value.get()), f);
+
+    EXPECT_EQ(stringField->type, FieldType::STRING);
+    EXPECT_EQ(stringField->size, s.length());
+    EXPECT_STREQ(stringField->value.get(), s.c_str());
+}

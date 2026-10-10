@@ -51,6 +51,11 @@ public:
      * Get the underlying <code>FileManager</code> given the <code>fileManagerId</code>
      */
     std::unique_ptr<FileManager> &getFileManager(const std::string &fileManagerId);
+
+    /**
+     * Get an available pageId
+     */
+    PageID getAvailablePageId(const std::string &fileManagerId);
 };
 
 class FileManagerNotRegisteredException : public std::runtime_error {

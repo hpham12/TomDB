@@ -11,8 +11,6 @@
 #include "../records/page.h"
 
 class FileManager {
-
-private:
     size_t numPages = 0;
     std::fstream filestream;
 
@@ -48,6 +46,13 @@ public:
 
     size_t getNumPages() const {
         return numPages;
+    }
+
+    // TODO: Implement more robust mechanism
+    uint16_t getAvailablePageId() {
+        auto availablePage = numPages;
+        this->extend();
+        return availablePage;
     }
 };
 

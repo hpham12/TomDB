@@ -48,7 +48,7 @@ namespace std {
     };
 }
 
-inline constexpr PageID INVALID_PAGE_ID = PageID{"", numeric_limits<uint16_t>::max()};
+inline constexpr PageID INVALID_PAGE_ID = PageID{.fileManagerId="", .fileManagerPageId=numeric_limits<uint16_t>::max()};
 
 enum LockMode {
     SHARED,

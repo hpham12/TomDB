@@ -128,6 +128,10 @@ void BufferManager::flushPage(const PageID &pageId) {
     storageManager->flushPage(pageId, *frame->page);
 }
 
+void BufferManager::flushPage(PageID pageId, Page &page) {
+    storageManager->flushPage(pageId, page);
+}
+
 void BufferManager::evictPage() {
     auto pageToEvict = policy->selectPageToEvict(pinnedPages);
     if (pageToEvict == INVALID_PAGE_ID) {
