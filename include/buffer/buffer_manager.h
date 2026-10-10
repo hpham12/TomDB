@@ -71,9 +71,13 @@ public:
     BufferManager();
     PageGuard pinPage(const PageID& pageId, LockMode lockMode);
     void flushPage(const PageID &pageId);
+    void flushPage(PageID pageId, Page &page);
     size_t getNumPages(const std::string& fileManagerId) const;
     void registerFileManager(const std::string& fileManagerId, const std::string& filePath) const;
     bool isPinned(const PageID &pageId) const;
+    PageID getAvailablePageId(const std::string& fileManagerId) const {
+        return storageManager->getAvailablePageId(fileManagerId);
+    }
 };
 
 #endif //TOMDB_BUFFER_MANAGER_H

@@ -93,7 +93,11 @@ std::unique_ptr<Tuple> Page::getTuple(size_t index) {
         return nullptr;
     }
 
-    std::istringstream iss(pageData.get() + slots[index].offset);
+    std::istringstream iss(std::string(
+        pageData.get() + slots[index].offset,
+        slots[index].size
+    ));
+    
     iss.seekg(0, std::ios::beg);
 
     return Tuple::deserialize(iss);

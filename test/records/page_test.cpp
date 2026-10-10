@@ -181,7 +181,7 @@ TEST(PageTest, ReusesDeletedSlotWithoutChangingNeighbor) {
     ASSERT_FALSE(page.deleteTuple(MAX_SLOTS));
 }
 
-TEST(PageTest, GTuple) {
+TEST(PageTest, GetTuple) {
     Page page;
     auto tuple = std::make_unique<Tuple>();
 
@@ -199,7 +199,7 @@ TEST(PageTest, GTuple) {
     page.addTuple(std::move(tuple), reason);
     page.addTuple(createSmallTestTuple(), reason);
 
-    auto retrievedTuple = page.getTuple(2);
+    auto retrievedTuple = page.getTuple(1);
 
     auto intField = retrievedTuple->getField(0);
     auto floatField = retrievedTuple->getField(1);

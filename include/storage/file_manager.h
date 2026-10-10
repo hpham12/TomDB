@@ -47,6 +47,13 @@ public:
     size_t getNumPages() const {
         return numPages;
     }
+
+    // TODO: Implement more robust mechanism
+    uint16_t getAvailablePageId() {
+        auto availablePage = numPages;
+        this->extend();
+        return availablePage;
+    }
 };
 
 #endif //TOMDB_FILE_MANAGER_H

@@ -43,7 +43,6 @@ add_library(tomdb_lib
         src/buffer/buffer_frame.cpp
         src/buffer/frame_lock_table.cpp
         src/buffer/page_guard.cpp
-        src/index/b_tree.cpp
 )
 
 target_include_directories(tomdb_lib
@@ -90,13 +89,8 @@ add_executable(tomdb
         src/main.cpp
         src/buffer/two_queue_policy.cpp
         src/buffer/buffer_manager.cpp
-        include/buffer/buffer_frame.h
         src/buffer/buffer_frame.cpp
-        include/buffer/frame_lock_table.h
-        include/buffer/page_guard.h
         src/buffer/page_guard.cpp
-        include/index/node.h
-        include/index/b_tree.h
         src/index/b_tree.cpp
 )
 
@@ -128,6 +122,7 @@ add_executable(tomdb_tests
         test/buffer/buffer_frame_test.cpp
         test/buffer/frame_lock_table_test.cpp
         test/buffer/page_guard.cpp
+        test/index/b_tree.cpp
 )
 
 target_link_libraries(tomdb_tests

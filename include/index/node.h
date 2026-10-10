@@ -9,56 +9,59 @@
 
 #include "commons.h"
 
-template <class T>
 class Node {
-    uint16_t numKeys;
-    PageID pageId;
-    std::vector<T> keys;
+    PageID id = INVALID_PAGE_ID;
     PageID parentId = INVALID_PAGE_ID;
+    uint16_t level;
+    uint16_t count;
+
+    template<class K>
+    friend class BTree;
 
 public:
-    [[nodiscard]] uint16_t getNumKeys() const { return numKeys; }
     [[nodiscard]] PageID getParentId() const { return this->parentId; }
-    [[nodiscard]] PageID getPageId() const { return pageId; }
-    std::vector<T> getKeys() const { return keys; }
-    virtual bool isLeaf() = 0;
-    Node(uint16_t numKeys, PageID pageId) : numKeys(numKeys), pageId(std::move(pageId)) {}
-    void setParentId(const PageID& parentId) { this->parentId = parentId; }
+    [[nodiscard]] PageID getId() const { return id; }
+
+    virtual bool isLeaf() {
+        return level == 0;
+    }
+
+    Node(uint16_t level = 0, uint16_t count = 0)
+        : level(level), count(count) {
+    }
+
     virtual ~Node() = default;
 };
 
 struct Record {
-    PageID pageId;
-    size_t slotIndex;
+    PageID pageId = INVALID_PAGE_ID;
+    size_t slotIndex = 0;
 };
 
-template <class T>
-class LeafNode : public Node<T> {
-    uint16_t numValues;
-    std::vector<Record> records;
+template<class T>
+class LeafNode : public Node {
+    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 2) - (sizeof(uint16_t) * 2))/(sizeof(Record) + sizeof(T));
+    std::array<Record, kCapacity> records{};
+    std::array<T, kCapacity> keys;
+
+    template<class K>
+    friend class BTree;
+
 public:
-    [[nodiscard]] uint16_t getNumValues() const { return numValues; }
-    [[nodiscard]] std::vector<PageID> getRecords() const { return this->getRecords(); }
-    LeafNode(uint16_t numKeys, PageID pageId) : Node<T>(numKeys, pageId) {
-        this->numValues = numKeys;
-    }
-    bool isLeaf() override {
-        return true;
-    }
+    LeafNode() = default;
 };
 
-template <class T>
-class InnerNode : public Node<T> {
-    uint16_t numChildren;
-    std::vector<PageID> records;
+template<class T>
+class InnerNode : public Node {
+    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 3) - (sizeof(uint16_t) * 2))/(sizeof(PageID) + sizeof(T));
+    std::array<T, kCapacity> keys;
+    std::array<PageID, kCapacity + 1> children;
+
+    template<class K>
+    friend class BTree;
+
 public:
-    [[nodiscard]] uint16_t getNumChildren() const { return numChildren; }
-    InnerNode(uint16_t numKeys, PageID pageId) : Node<T>(numKeys, pageId) {
-        this->numChildren = numKeys + 1;
-    }
-    bool isLeaf() override {
-        return false;
-    }
+    InnerNode() = default;
 };
 
 #endif //TOMDB_NODE_H
