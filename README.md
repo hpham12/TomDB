@@ -52,8 +52,8 @@ Then, you can run Valgrind using the profiler option
 ✅ Page, tuple, field \
 ✅ File manager \
 ✅ Storage manager \
-🚧 Buffer manager \
-⏳ B-tree indexing
+✅ Buffer manager \
+🚧 B-tree indexing
 
 ### Query layer
 ⏳ Query parser \
