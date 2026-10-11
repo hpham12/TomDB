@@ -627,3 +627,52 @@ TEST_F(BufferManagerTest, AutomaticEvictionPersistsDirtyVictimAndReusesFrame) {
     auto updatedPage = bm.pinPage(firstPageId, SHARED);
     ASSERT_EQ(std::string(updatedPage->pageData.get(), PAGE_SIZE), expected);
 }
+
+
+TEST_F(BufferManagerTest, GetAvailablePageIdAppendsInitializedPages) {
+    BufferManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    manager.registerFileManager("fm", filePath);
+    for (size_t expectedId = 1; expectedId <= 2; ++expectedId) {
+        const auto pageId = manager.getAvailablePageId("fm");
+        EXPECT_EQ(pageId.fileManagerId, "fm");
+        ASSERT_EQ(pageId.fileManagerPageId, expectedId);
+        ASSERT_EQ(manager.getNumPages("fm"), expectedId + 1);
+        ASSERT_EQ(std::filesystem::file_size(filePath), (expectedId + 1) * PAGE_SIZE);
+        auto page = manager.pinPage(pageId, SHARED);
+        Page expected;
+        EXPECT_EQ(std::string(page->pageData.get(), PAGE_SIZE),
+                  std::string(expected.pageData.get(), PAGE_SIZE));
+    }
+}
+
+TEST_F(BufferManagerTest, GetAvailablePageIdBeyondUint16Range) {
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    {
+        std::ofstream create(filePath);
+    }
+    // Create a sparse file before registration so the manager sees the full count.
+    constexpr size_t firstAvailableId = size_t{1} << 16;
+    std::filesystem::resize_file(filePath, firstAvailableId * PAGE_SIZE);
+    BufferManager manager;
+    manager.registerFileManager("fm", filePath);
+    const auto pageId = manager.getAvailablePageId("fm");
+    EXPECT_EQ(pageId.fileManagerId, "fm");
+    ASSERT_EQ(pageId.fileManagerPageId, firstAvailableId);
+    ASSERT_EQ(manager.getNumPages("fm"), firstAvailableId + 1);
+    auto page = manager.pinPage(pageId, SHARED);
+    Page expected;
+    EXPECT_EQ(std::string(page->pageData.get(), PAGE_SIZE),
+              std::string(expected.pageData.get(), PAGE_SIZE));
+}
+
+TEST_F(BufferManagerTest, GetAvailablePageIdWhenFileManagerNotRegistered) {
+    BufferManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    manager.registerFileManager("fm", filePath);
+    ASSERT_THROW(manager.getAvailablePageId("missing"), FileManagerNotRegisteredException);
+    EXPECT_EQ(manager.getNumPages("fm"), 1);
+}

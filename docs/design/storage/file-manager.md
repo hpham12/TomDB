@@ -6,7 +6,7 @@ Sources: [file_manager.h](../../../include/storage/file_manager.h) and [file_man
 
 ## Responsibility
 
-Each `FileManager` owns one `std::fstream` and its in-memory `numPages`. It maps zero-based page numbers to fixed-size file regions. [StorageManager](storage-manager.md) owns the registry of multiple file managers; tuple deletion belongs to [Page](../records/pages.md).
+Each `FileManager` owns one `std::fstream` and its in-memory `size_t numPages`. File-local page IDs use `size_t` throughout loading, flushing, extension, and allocation. It maps zero-based page numbers to fixed-size file regions. [StorageManager](storage-manager.md) owns the registry of multiple file managers; tuple deletion belongs to [Page](../records/pages.md).
 
 A file is a contiguous sequence of raw page images, without a file header:
 
@@ -25,10 +25,11 @@ Failure to open, filesystem exceptions during setup, or failure to determine fil
 
 | Operation | Behavior |
 | --- | --- |
-| `load(uint16_t pageId)` | Checks bounds, seeks, reads one page into a newly owned `Page`, and returns it |
-| `flush(uint16_t pageId, const Page&)` | Checks bounds, overwrites one page, and flushes the stream |
+| `load(size_t pageId)` | Checks bounds, seeks, reads one page into a newly owned `Page`, and returns it |
+| `flush(size_t pageId, const Page&)` | Checks bounds, overwrites one page, and flushes the stream |
 | `extend()` | Writes one initialized page at the current end and increments the count |
 | `extend(size_t maxPageId)` | Writes initialized pages through the requested inclusive page ID |
+| `getAvailablePageId()` | Appends one initialized page and returns its `size_t` page ID |
 | `getNumPages()` | Returns the in-memory count |
 
 An out-of-range load throws `std::out_of_range`; an out-of-range flush prints an error and returns false. A valid-range flush returns true without checking the subsequent stream state. `extend(10)` on a one-page file adds ten pages and results in eleven pages. If the requested ID already exists, extension logs a message and leaves the count unchanged.

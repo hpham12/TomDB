@@ -38,7 +38,10 @@ public:
      */
     bool deleteTuple(size_t index);
 
-    std::unique_ptr<Tuple> getTuple(size_t index);
+    /**
+     * Get a tuple, given its slot index
+     */
+    std::unique_ptr<Tuple> getTuple(size_t index) const;
 };
 
 #endif //TOMDB_PAGE_H

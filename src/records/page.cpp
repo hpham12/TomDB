@@ -82,7 +82,7 @@ bool Page::deleteTuple(size_t index) {
     return true;
 }
 
-std::unique_ptr<Tuple> Page::getTuple(size_t index) {
+std::unique_ptr<Tuple> Page::getTuple(size_t index) const {
     if (index >= MAX_SLOTS) {
         return nullptr;
     }
@@ -97,7 +97,7 @@ std::unique_ptr<Tuple> Page::getTuple(size_t index) {
         pageData.get() + slots[index].offset,
         slots[index].size
     ));
-    
+
     iss.seekg(0, std::ios::beg);
 
     return Tuple::deserialize(iss);

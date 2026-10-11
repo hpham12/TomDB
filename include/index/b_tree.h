@@ -29,4 +29,6 @@ public:
   bool update(K key, std::unique_ptr<Tuple> newValue);
 };
 
+#include "b_tree.tpp"
+
 #endif //TOMDB_B_TREE_H

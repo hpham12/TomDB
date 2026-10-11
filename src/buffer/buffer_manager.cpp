@@ -11,7 +11,7 @@
 BufferManager::BufferManager() {
     for (size_t i = 0; i < MAX_CACHED_PAGES; i++) {
         bufferPool.emplace_back(std::make_unique<BufferFrame>());
-        availableFrames.insert(static_cast<FrameID>(i));
+        availableFrames.insert(i);
     }
 }
 
@@ -128,7 +128,7 @@ void BufferManager::flushPage(const PageID &pageId) {
     storageManager->flushPage(pageId, *frame->page);
 }
 
-void BufferManager::flushPage(PageID pageId, Page &page) {
+void BufferManager::flushUncachedPage(PageID pageId, Page &page) const {
     storageManager->flushPage(pageId, page);
 }
 
@@ -159,4 +159,8 @@ void BufferManager::registerFileManager(const std::string &fileManagerId, const 
 bool BufferManager::isPinned(const PageID &pageId) const {
     std::shared_lock guard(metadataMutex);
     return pinnedPages.contains(pageId);
+}
+
+PageID BufferManager::getAvailablePageId(const std::string& fileManagerId) const {
+    return storageManager->getAvailablePageId(fileManagerId);
 }

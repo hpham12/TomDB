@@ -44,7 +44,7 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
     }
 }
 
-std::unique_ptr<Page> FileManager::load(uint16_t pageId) {
+std::unique_ptr<Page> FileManager::load(size_t pageId) {
     if (pageId >= numPages) {
         throw std::out_of_range("Requested page not exist");
     }
@@ -57,7 +57,7 @@ std::unique_ptr<Page> FileManager::load(uint16_t pageId) {
     return page;
 }
 
-bool FileManager::flush(uint16_t pageId, const Page &page) {
+bool FileManager::flush(size_t pageId, const Page &page) {
     if (pageId >= numPages) {
         std::cerr << "Requested page not exist" << '\n';
         return false;
@@ -99,4 +99,16 @@ void FileManager::extend() {
     filestream.write(newPage.pageData.get(), PAGE_SIZE);
     filestream.flush();
     numPages++;
+}
+
+// TODO: Implement more robust mechanism
+size_t FileManager::getAvailablePageId() {
+    std::lock_guard lock(mutex);
+    if (numPages == std::numeric_limits<size_t>::max()) {
+        std::cerr << "The number of pages exceeded the DB capacity" << '\n';
+        exit(1);
+    }
+    auto availablePage = numPages;
+    this->extend();
+    return availablePage;
 }

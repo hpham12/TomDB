@@ -61,7 +61,7 @@ class InnerNode : public Node {
     friend class BTree;
 
 public:
-    InnerNode() = default;
+    InnerNode() : Node(1, 0) {}
 };
 
 #endif //TOMDB_NODE_H

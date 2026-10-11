@@ -2,7 +2,6 @@
 // Created by Hieu Pham on 10/4/26.
 //
 
-#include "index/b_tree.h"
 #include <cstring>
 
 #include "index/node.h"

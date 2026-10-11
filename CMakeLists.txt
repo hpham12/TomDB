@@ -91,7 +91,6 @@ add_executable(tomdb
         src/buffer/buffer_manager.cpp
         src/buffer/buffer_frame.cpp
         src/buffer/page_guard.cpp
-        src/index/b_tree.cpp
 )
 
 target_link_libraries(tomdb
