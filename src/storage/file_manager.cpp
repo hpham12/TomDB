@@ -124,3 +124,8 @@ size_t FileManager::getAvailablePageId() {
 
     return availablePage;
 }
+
+size_t FileManager::getNumPages() {
+    std::lock_guard lock(mutex);
+    return numPages;
+}

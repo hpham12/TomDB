@@ -45,10 +45,14 @@ public:
      */
     void extend(size_t maxPageId);
 
-    size_t getNumPages() const {
-        return numPages;
-    }
+    /**
+     * Get the current numPages
+     */
+    size_t getNumPages();
 
+    /**
+     * Get an available pageId
+     */
     size_t getAvailablePageId();
 };
 
