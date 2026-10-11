@@ -113,6 +113,14 @@ size_t FileManager::getAvailablePageId() {
         exit(1);
     }
     auto availablePage = numPages;
-    this->extend();
+
+    // perform the extension without calling extend() to avoid deadlock
+    size_t pageOffset = numPages * PAGE_SIZE;
+    Page newPage;
+    filestream.seekp(pageOffset, std::ios::beg);
+    filestream.write(newPage.pageData.get(), PAGE_SIZE);
+    filestream.flush();
+    numPages++;
+
     return availablePage;
 }
