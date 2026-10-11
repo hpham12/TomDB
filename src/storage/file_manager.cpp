@@ -44,7 +44,8 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
     }
 }
 
-std::unique_ptr<Page> FileManager::load(uint16_t pageId) {
+std::unique_ptr<Page> FileManager::load(size_t pageId) {
+    std::lock_guard lock(mutex);
     if (pageId >= numPages) {
         throw std::out_of_range("Requested page not exist");
     }
@@ -57,7 +58,8 @@ std::unique_ptr<Page> FileManager::load(uint16_t pageId) {
     return page;
 }
 
-bool FileManager::flush(uint16_t pageId, const Page &page) {
+bool FileManager::flush(size_t pageId, const Page &page) {
+    std::lock_guard lock(mutex);
     if (pageId >= numPages) {
         std::cerr << "Requested page not exist" << '\n';
         return false;
@@ -72,6 +74,7 @@ bool FileManager::flush(uint16_t pageId, const Page &page) {
 }
 
 void FileManager::extend(size_t maxPageId) {
+    std::lock_guard lock(mutex);
     if (maxPageId < numPages) {
         std::cerr << "maxPageId is smaller than the current number of pages" << '\n';
         return;
@@ -93,10 +96,36 @@ void FileManager::extend(size_t maxPageId) {
 }
 
 void FileManager::extend() {
+    std::lock_guard lock(mutex);
     size_t pageOffset = numPages * PAGE_SIZE;
     Page newPage;
     filestream.seekp(pageOffset, std::ios::beg);
     filestream.write(newPage.pageData.get(), PAGE_SIZE);
     filestream.flush();
     numPages++;
+}
+
+// TODO: Implement more robust mechanism
+size_t FileManager::getAvailablePageId() {
+    std::lock_guard lock(mutex);
+    if (numPages == std::numeric_limits<size_t>::max()) {
+        std::cerr << "The number of pages exceeded the DB capacity" << '\n';
+        exit(1);
+    }
+    auto availablePage = numPages;
+
+    // perform the extension without calling extend() to avoid deadlock
+    size_t pageOffset = numPages * PAGE_SIZE;
+    Page newPage;
+    filestream.seekp(pageOffset, std::ios::beg);
+    filestream.write(newPage.pageData.get(), PAGE_SIZE);
+    filestream.flush();
+    numPages++;
+
+    return availablePage;
+}
+
+size_t FileManager::getNumPages() {
+    std::lock_guard lock(mutex);
+    return numPages;
 }

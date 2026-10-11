@@ -8,25 +8,25 @@ Source: [include/commons.h](../../include/commons.h).
 
 TomDB uses compile-time constants. There is no runtime configuration loader, OS page-size detection, or persisted configuration header. Changing a layout constant requires rebuilding and can make existing files incompatible.
 
-| Constant or type | Current value | Meaning |
-| --- | --- | --- |
-| `PAGE_SIZE` | 4096 bytes | Unit of page allocation and file I/O |
-| `MAX_SLOTS` | 50 | Fixed slot directory entries per page |
-| `MAX_CACHED_PAGES` | 15 | Buffer frames, pin counters, and lock-table entries |
-| `DATABASE_FILE_NAME` | `tomdb.data` | Defined filename constant; managers accept explicit paths |
-| `INDEX_FILE_NAME` | `tomdb.index` | Defined filename constant; no implemented index component |
-| `FrameID` | `uint16_t` | Index into the buffer pool |
-| `INVALID_FRAME_ID` | 65535 | Unassigned frame marker |
+| Constant or type | Current value                          | Meaning |
+| --- |----------------------------------------| --- |
+| `PAGE_SIZE` | 4096 bytes                             | Unit of page allocation and file I/O |
+| `MAX_SLOTS` | 50                                     | Fixed slot directory entries per page |
+| `MAX_CACHED_PAGES` | 15                                     | Buffer frames, pin counters, and lock-table entries |
+| `DATABASE_FILE_NAME` | `tomdb.data`                           | Defined filename constant; managers accept explicit paths |
+| `INDEX_FILE_NAME` | `tomdb.index`                          | Defined filename constant; no implemented index component |
+| `FrameID` | `size_t`                               | Index into the buffer pool |
+| `INVALID_FRAME_ID` | Maximum `size_t`                                  | Unassigned frame marker |
 | `INVALID_VALUE` | Maximum `uint64_t`, stored as `size_t` | Uninitialized slot offset/size and failed insertion marker |
-| `LockMode` | `SHARED`, `EXCLUSIVE` | Requested frame access mode |
+| `LockMode` | `SHARED`, `EXCLUSIVE`                  | Requested frame access mode |
 
 The 4096-byte database page is fixed independently of the host's OS page size. The buffer holds 61,440 bytes of page payload at capacity, plus frame, lock, container, and allocation overhead.
 
 ## Page identity
 
-`PageID` combines a string `fileManagerId` with a `uint16_t fileManagerPageId`. Both participate in equality and hashing, so page zero in two registered files has distinct cache identities. File-local page numbers are zero-based and translate to byte offset `fileManagerPageId * PAGE_SIZE`.
+`PageID` combines a string `fileManagerId` with a `size_t fileManagerPageId`. Both participate in equality and hashing, so page zero in two registered files has distinct cache identities. File-local page numbers are zero-based and translate to byte offset `fileManagerPageId * PAGE_SIZE`.
 
-`INVALID_PAGE_ID` is the pair `{"", 65535}`. There is no general sentinel validation at registration or pinning boundaries. Callers should avoid using that pair as a real page identity. A 16-bit page number addresses 65,536 pages (256 MiB at the current page size), although extension accepts `size_t` and does not enforce this addressability limit.
+`INVALID_PAGE_ID` is the pair `{"", std::numeric_limits<size_t>::max()}`. There is no general sentinel validation at registration or pinning boundaries. Callers should avoid using that pair as a real page identity. File-local page IDs, file-manager API parameters and allocation results, and page counts all use `size_t`, removing the former 65,536-page (256 MiB) addressability limit. The width of `size_t` is platform-dependent. Practical limits still depend on byte-offset arithmetic, the stream offset range, and the filesystem; offset overflow is not checked. Frame IDs also use `size_t`, but valid frames remain in `[0, MAX_CACHED_PAGES)`.
 
 ## Persistent format assumptions
 

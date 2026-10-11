@@ -627,3 +627,117 @@ TEST_F(BufferManagerTest, AutomaticEvictionPersistsDirtyVictimAndReusesFrame) {
     auto updatedPage = bm.pinPage(firstPageId, SHARED);
     ASSERT_EQ(std::string(updatedPage->pageData.get(), PAGE_SIZE), expected);
 }
+
+
+TEST_F(BufferManagerTest, GetAvailablePageIdAppendsInitializedPages) {
+    BufferManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    manager.registerFileManager("fm", filePath);
+    for (size_t expectedId = 1; expectedId <= 2; ++expectedId) {
+        const auto pageId = manager.getAvailablePageId("fm");
+        EXPECT_EQ(pageId.fileManagerId, "fm");
+        ASSERT_EQ(pageId.fileManagerPageId, expectedId);
+        ASSERT_EQ(manager.getNumPages("fm"), expectedId + 1);
+        ASSERT_EQ(std::filesystem::file_size(filePath), (expectedId + 1) * PAGE_SIZE);
+        auto page = manager.pinPage(pageId, SHARED);
+        Page expected;
+        EXPECT_EQ(std::string(page->pageData.get(), PAGE_SIZE),
+                  std::string(expected.pageData.get(), PAGE_SIZE));
+    }
+}
+
+TEST_F(BufferManagerTest, GetAvailablePageIdBeyondUint16Range) {
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    {
+        std::ofstream create(filePath);
+    }
+    // Create a sparse file before registration so the manager sees the full count.
+    constexpr size_t firstAvailableId = size_t{1} << 16;
+    std::filesystem::resize_file(filePath, firstAvailableId * PAGE_SIZE);
+    BufferManager manager;
+    manager.registerFileManager("fm", filePath);
+    const auto pageId = manager.getAvailablePageId("fm");
+    EXPECT_EQ(pageId.fileManagerId, "fm");
+    ASSERT_EQ(pageId.fileManagerPageId, firstAvailableId);
+    ASSERT_EQ(manager.getNumPages("fm"), firstAvailableId + 1);
+    auto page = manager.pinPage(pageId, SHARED);
+    Page expected;
+    EXPECT_EQ(std::string(page->pageData.get(), PAGE_SIZE),
+              std::string(expected.pageData.get(), PAGE_SIZE));
+}
+
+TEST_F(BufferManagerTest, GetAvailablePageIdWhenFileManagerNotRegistered) {
+    BufferManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    manager.registerFileManager("fm", filePath);
+    ASSERT_THROW(manager.getAvailablePageId("missing"), FileManagerNotRegisteredException);
+    EXPECT_EQ(manager.getNumPages("fm"), 1);
+}
+
+
+TEST_F(BufferManagerTest, FlushUncachedPagePersistsSuppliedPageInSelectedFile) {
+    BufferManager bm;
+    const auto filePath = generateRandomFilePath();
+    const auto otherFilePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    filePaths.push_back(otherFilePath);
+    bm.registerFileManager("fm", filePath);
+    bm.registerFileManager("other", otherFilePath);
+    const auto pageId = bm.getAvailablePageId("fm");
+
+    Page supplied;
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(std::string("uncached data")));
+    ASSERT_EQ(supplied.addTuple(std::move(tuple), nullptr), 0);
+    const std::string expected(supplied.pageData.get(), PAGE_SIZE);
+    const BufferManager &readOnlyManager = bm;
+    readOnlyManager.flushUncachedPage(pageId, supplied);
+
+    EXPECT_FALSE(bm.isPinned(pageId));
+    EXPECT_EQ(bm.getNumPages("fm"), 2);
+    EXPECT_EQ(std::string(supplied.pageData.get(), PAGE_SIZE), expected);
+    FileManager reader(filePath);
+    auto persisted = reader.load(pageId.fileManagerPageId);
+    EXPECT_EQ(std::string(persisted->pageData.get(), PAGE_SIZE), expected);
+    auto pinned = bm.pinPage(pageId, SHARED);
+    EXPECT_EQ(std::string(pinned->pageData.get(), PAGE_SIZE), expected);
+
+    Page empty;
+    FileManager otherReader(otherFilePath);
+    auto untouched = otherReader.load(0);
+    EXPECT_EQ(std::string(untouched->pageData.get(), PAGE_SIZE),
+              std::string(empty.pageData.get(), PAGE_SIZE));
+}
+
+
+TEST_F(BufferManagerTest, FlushUncachedPageThrowsForUnregisteredFileManager) {
+    BufferManager bm;
+    Page supplied;
+    EXPECT_THROW(bm.flushUncachedPage(
+        (PageID{.fileManagerId="missing", .fileManagerPageId=0}), supplied),
+        FileManagerNotRegisteredException);
+}
+
+TEST_F(BufferManagerTest, FlushUncachedPageOutOfRangeDoesNotExtendOrOverwriteFile) {
+    BufferManager bm;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    bm.registerFileManager("fm", filePath);
+    Page supplied;
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(42));
+    ASSERT_EQ(supplied.addTuple(std::move(tuple), nullptr), 0);
+    // The void wrapper currently discards the storage layer's false result.
+    EXPECT_NO_THROW(bm.flushUncachedPage(
+        (PageID{.fileManagerId="fm", .fileManagerPageId=1}), supplied));
+    EXPECT_EQ(bm.getNumPages("fm"), 1);
+    EXPECT_EQ(std::filesystem::file_size(filePath), PAGE_SIZE);
+    FileManager reader(filePath);
+    auto untouched = reader.load(0);
+    Page empty;
+    EXPECT_EQ(std::string(untouched->pageData.get(), PAGE_SIZE),
+              std::string(empty.pageData.get(), PAGE_SIZE));
+}

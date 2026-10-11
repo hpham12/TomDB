@@ -11,10 +11,9 @@
 #include "../records/page.h"
 
 class FileManager {
-
-private:
     size_t numPages = 0;
     std::fstream filestream;
+    std::mutex mutex;
 
 public:
     FileManager(const std::filesystem::path &filePath);
@@ -28,12 +27,12 @@ public:
     /**
      * load the page, given <code>pageId</code>
      */
-    std::unique_ptr<Page> load(uint16_t pageId);
+    std::unique_ptr<Page> load(size_t pageId);
 
     /**
      * Flush the input <code>page</code>, given the <code>pageId</code>
      */
-    bool flush(uint16_t pageId, const Page &page);
+    bool flush(size_t pageId, const Page &page);
 
     /**
      * Extend file by one page
@@ -46,9 +45,15 @@ public:
      */
     void extend(size_t maxPageId);
 
-    size_t getNumPages() const {
-        return numPages;
-    }
+    /**
+     * Get the current numPages
+     */
+    size_t getNumPages();
+
+    /**
+     * Get an available pageId
+     */
+    size_t getAvailablePageId();
 };
 
 #endif //TOMDB_FILE_MANAGER_H

@@ -162,3 +162,26 @@ TEST_F(StorageManagerTest, GetNumPagesWhenFileManagerIdNotFound) {
 
     ASSERT_THROW(storageManager.getNumPages("fm2"), FileManagerNotRegisteredException);
 }
+
+TEST_F(StorageManagerTest, GetAvailablePageId) {
+    StorageManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    ASSERT_TRUE(manager.registerFileManager("fm", filePath));
+    for (size_t expectedId = 1; expectedId <= 2; ++expectedId) {
+        const auto pageId = manager.getAvailablePageId("fm");
+        EXPECT_EQ(pageId.fileManagerId, "fm");
+        ASSERT_EQ(pageId.fileManagerPageId, expectedId);
+        ASSERT_EQ(manager.getNumPages("fm"), expectedId + 1);
+        ASSERT_EQ(std::filesystem::file_size(filePath), (expectedId + 1) * PAGE_SIZE);
+    }
+}
+
+TEST_F(StorageManagerTest, GetAvailablePageIdWhenFileManagerNotRegistered) {
+    StorageManager manager;
+    const auto filePath = generateRandomFilePath();
+    filePaths.push_back(filePath);
+    ASSERT_TRUE(manager.registerFileManager("fm", filePath));
+    ASSERT_THROW(manager.getAvailablePageId("missing"), FileManagerNotRegisteredException);
+    EXPECT_EQ(manager.getNumPages("fm"), 1);
+}

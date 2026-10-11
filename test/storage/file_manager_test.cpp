@@ -183,3 +183,21 @@ TEST_F(FileManagerTest, ReopenPreservesPagesAndExtensionDoesNotOverwriteData) {
     ASSERT_THROW(fileManager.load(5), std::out_of_range);
     ASSERT_FALSE(fileManager.flush(5, newPage));
 }
+
+
+TEST_F(FileManagerTest, GetAvailablePageIdAppendsInitializedPages) {
+    FileManager fileManager(filePath);
+    for (size_t expectedId = 1; expectedId <= 2; ++expectedId) {
+        const auto pageId = fileManager.getAvailablePageId();
+        ASSERT_EQ(pageId, expectedId);
+        ASSERT_EQ(fileManager.getNumPages(), expectedId + 1);
+        ASSERT_EQ(std::filesystem::file_size(filePath), (expectedId + 1) * PAGE_SIZE);
+        auto page = fileManager.load(pageId);
+        const auto *slots = reinterpret_cast<const Slot*>(page->pageData.get());
+        for (size_t i = 0; i < MAX_SLOTS; ++i) {
+            EXPECT_TRUE(slots[i].empty);
+            EXPECT_EQ(slots[i].offset, INVALID_VALUE);
+            EXPECT_EQ(slots[i].size, INVALID_VALUE);
+        }
+    }
+}

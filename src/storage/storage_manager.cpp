@@ -69,3 +69,11 @@ std::unique_ptr<FileManager> &StorageManager::getFileManager(const std::string &
 
      return fileManagers[fileManagerId];
 }
+
+PageID StorageManager::getAvailablePageId(const std::string &fileManagerId) {
+     if (!fileManagers.contains(fileManagerId)) {
+          throw FileManagerNotRegisteredException();
+     }
+
+     return PageID{.fileManagerId=fileManagerId, .fileManagerPageId=fileManagers[fileManagerId]->getAvailablePageId()};
+}

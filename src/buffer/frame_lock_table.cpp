@@ -7,7 +7,7 @@
 #include <chrono>
 
 FrameLockTable::FrameLockTable() {
-    for (auto i = 0; i  < MAX_CACHED_PAGES; i++) {
+    for (FrameID i = 0; i < MAX_CACHED_PAGES; i++) {
         ownerShipInfo[i] = std::make_unique<OwnershipInfo>();
     }
 }
