@@ -4,8 +4,7 @@
 
 #ifndef TOMDB_NODE_H
 #define TOMDB_NODE_H
-#include <utility>
-#include <vector>
+#include <array>
 
 #include "commons.h"
 
