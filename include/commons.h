@@ -9,14 +9,16 @@
 #include <cstdint>
 #include <limits>
 
-inline constexpr std::string DATABASE_FILE_NAME = "tomdb.data";
-inline constexpr std::string INDEX_FILE_NAME = "tomdb.index";
+using namespace std;
+
+inline constexpr string DATABASE_FILE_NAME = "tomdb.data";
+inline constexpr string INDEX_FILE_NAME = "tomdb.index";
 
 inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
-inline constexpr size_t INVALID_VALUE = std::numeric_limits<uint64_t>::max();
+inline constexpr size_t INVALID_VALUE = numeric_limits<uint64_t>::max();
 
-inline constexpr size_t INVALID_FRAME_ID = std::numeric_limits<size_t>::max();
+inline constexpr size_t INVALID_FRAME_ID = numeric_limits<size_t>::max();
 
 inline constexpr size_t MAX_SLOTS = 50;
 
@@ -46,7 +48,7 @@ namespace std {
     };
 }
 
-inline constexpr PageID INVALID_PAGE_ID = PageID{.fileManagerId="", .fileManagerPageId=std::numeric_limits<size_t>::max()};
+inline constexpr PageID INVALID_PAGE_ID = PageID{.fileManagerId="", .fileManagerPageId=numeric_limits<size_t>::max()};
 
 enum LockMode {
     SHARED,
