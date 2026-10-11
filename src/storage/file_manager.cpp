@@ -45,6 +45,7 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
 }
 
 std::unique_ptr<Page> FileManager::load(size_t pageId) {
+    std::lock_guard lock(mutex);
     if (pageId >= numPages) {
         throw std::out_of_range("Requested page not exist");
     }
@@ -58,6 +59,7 @@ std::unique_ptr<Page> FileManager::load(size_t pageId) {
 }
 
 bool FileManager::flush(size_t pageId, const Page &page) {
+    std::lock_guard lock(mutex);
     if (pageId >= numPages) {
         std::cerr << "Requested page not exist" << '\n';
         return false;
@@ -72,6 +74,7 @@ bool FileManager::flush(size_t pageId, const Page &page) {
 }
 
 void FileManager::extend(size_t maxPageId) {
+    std::lock_guard lock(mutex);
     if (maxPageId < numPages) {
         std::cerr << "maxPageId is smaller than the current number of pages" << '\n';
         return;
@@ -93,6 +96,7 @@ void FileManager::extend(size_t maxPageId) {
 }
 
 void FileManager::extend() {
+    std::lock_guard lock(mutex);
     size_t pageOffset = numPages * PAGE_SIZE;
     Page newPage;
     filestream.seekp(pageOffset, std::ios::beg);
