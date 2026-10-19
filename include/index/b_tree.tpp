@@ -18,7 +18,8 @@ BTree<K>::BTree(std::filesystem::path indexFilePath, std::string indexFileId,
 
     // TODO: Handle case where index file exists
 
-    //---
+    // Index file does not exist yet
+
 }
 
 template <typename K>
@@ -71,4 +72,9 @@ std::unique_ptr<Tuple> BTree<K>::get(K key) {
 template <typename K>
 bool BTree<K>::update(K key, std::unique_ptr<Tuple> newValue) {
     return false;
+}
+
+template <typename K>
+std::vector<std::unique_ptr<Tuple>> getAll(K from , K to) {
+    throw std::logic_error("Method not implemented");
 }

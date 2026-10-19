@@ -122,6 +122,7 @@ add_executable(tomdb_tests
         test/buffer/frame_lock_table_test.cpp
         test/buffer/page_guard.cpp
         test/index/b_tree.cpp
+        test/index/node.cpp
 )
 
 target_link_libraries(tomdb_tests
