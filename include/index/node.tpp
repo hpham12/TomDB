@@ -122,9 +122,9 @@ bool LeafNode<K>::add(K key, Record record) {
 template<class K>
 Record LeafNode<K>::getRecord(K key) const {
     // search for key
-    size_t low = 0;
-    size_t high = count - 1;
-    size_t mid = 0;
+    int low = 0;
+    int high = count - 1;
+    int mid = 0;
 
     while (low <= high) {
         mid = (low + high) / 2;
