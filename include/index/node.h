@@ -6,6 +6,7 @@
 #define TOMDB_NODE_H
 #include <array>
 
+#include "gtest/gtest_prod.h"
 #include "commons.h"
 
 class Node {
@@ -35,7 +36,7 @@ public:
 
 template<class K>
 class LeafNode : public Node {
-    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 2) - (sizeof(uint16_t) * 2))/(sizeof(Record) + sizeof(K));
+    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 3) - (sizeof(uint16_t) * 2))/(sizeof(Record) + sizeof(K));
     std::array<Record, kCapacity> records{};
     std::array<K, kCapacity> keys;
     PageID next = INVALID_PAGE_ID;
@@ -58,7 +59,9 @@ public:
     int getKeyIndex(K key) const;
 
     /**
-     * Add a key and record to the node. This method will throw an exception if the node is full
+     * Add a key and record to the node.
+     *
+     * @return <code>true</code> if insertion is successful, <code>false</code> otherwise
      */
     bool add(K key, Record record);
 

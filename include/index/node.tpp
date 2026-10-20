@@ -97,19 +97,19 @@ bool LeafNode<K>::add(K key, Record record) {
         return true;
     }
 
-    size_t keyIndex = getKeyIndex(key);
+    int keyIndex = getKeyIndex(key);
 
     // add key in to keys array
-    for (size_t i = count - 1; i >= keyIndex; --i) {
+    for (int i = count - 1; i >= keyIndex; --i) {
         keys[i + 1] = keys[i];
     }
 
     keys[keyIndex] = key;
 
     // add child into children array
-    size_t recordIndex = keyIndex;
+    int recordIndex = keyIndex;
 
-    for (size_t i = count - 1; i >= recordIndex; --i) {
+    for (int i = count - 1; i >= recordIndex; --i) {
         records[i + 1] = records[i];
     }
 
