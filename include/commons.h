@@ -18,7 +18,7 @@ inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
 inline constexpr size_t INVALID_VALUE = numeric_limits<uint64_t>::max();
 
-inline constexpr size_t INVALID_KEY_INDEX = numeric_limits<size_t>::max();
+inline constexpr int INVALID_INDEX = numeric_limits<int>::max();
 
 inline constexpr size_t INVALID_FRAME_ID = numeric_limits<size_t>::max();
 

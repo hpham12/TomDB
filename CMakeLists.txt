@@ -64,8 +64,9 @@ target_link_libraries(tomdb_lib
 if(ENABLE_COVERAGE)
     message(STATUS "Code coverage enabled")
 
+    # Consumers instantiate header-only and template code, so instrument them too.
     target_compile_options(tomdb_lib
-            PRIVATE
+            PUBLIC
             --coverage
             -fprofile-abs-path
     )
@@ -158,6 +159,8 @@ if(ENABLE_COVERAGE)
 
             COMMAND ${GCOVR}
             --root ${PROJECT_SOURCE_DIR}
+            --filter ${PROJECT_SOURCE_DIR}/src/
+            --filter ${PROJECT_SOURCE_DIR}/include/
             --object-directory ${CMAKE_BINARY_DIR}
             --sonarqube ${CMAKE_BINARY_DIR}/coverage.xml
 

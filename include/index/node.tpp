@@ -5,46 +5,49 @@
 #define TOMDB_NODE_TPP
 
 template<class K>
-bool InnerNode<K>::add(K key, PageID child) {
+int InnerNode<K>::addKey(K key) {
     if (count == kCapacity) {
-        std::cerr << "Cannot add addition entry because node is full" << '\n';
-        return false;
+        std::cerr << "Cannot add addition key because node is full" << '\n';
+        return INVALID_INDEX;
     }
 
-    if (count == 0) {
-        keys[0] = key;
-        children[1] = child;
-        ++count;
-        return true;
-    }
+    int keyIndex = getKeyIndex(key);
 
-    size_t keyIndex = getKeyIndex(key);
+    if (keyIndex == kCapacity) {
+        return INVALID_INDEX;
+    }
 
     // add key in to keys array
-    for (size_t i = count - 1; i >= keyIndex; --i) {
+    for (int i = kCapacity - 2; i >= keyIndex; --i) {
         keys[i + 1] = keys[i];
     }
 
     keys[keyIndex] = key;
 
-    // add child into children array
-    size_t childIndex = keyIndex + 1;
+    return keyIndex;
+}
 
-    for (size_t i = count; i >= childIndex; --i) {
+template<class K>
+bool InnerNode<K>::addChild(PageID child, int index) {
+    if (count == kCapacity) {
+        std::cerr << "Cannot add addition child because node is full" << '\n';
+        return false;
+    }
+
+    for (int i = kCapacity - 1; i >= index; --i) {
         children[i + 1] = children[i];
     }
 
-    children[childIndex] = child;
-    count++;
+    children[index] = child;
 
     return true;
 }
 
 template<class K>
-size_t InnerNode<K>::getKeyIndex(K key) const {
-    size_t low = 0;
-    size_t high = count;
-    size_t mid = 0;
+int InnerNode<K>::getKeyIndex(K key) const {
+    int low = 0;
+    int high = count;
+    int mid = 0;
 
     while (low < high) {
         mid = (low + high) / 2;
@@ -61,10 +64,10 @@ size_t InnerNode<K>::getKeyIndex(K key) const {
 }
 
 template<class K>
-size_t LeafNode<K>::getKeyIndex(K key) const {
-    size_t low = 0;
-    size_t high = count;
-    size_t mid = 0;
+int LeafNode<K>::getKeyIndex(K key) const {
+    int low = 0;
+    int high = count;
+    int mid = 0;
 
     while (low < high) {
         mid = (low + high) / 2;

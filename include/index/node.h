@@ -55,7 +55,7 @@ public:
     /**
      * Get the index where <code>key</code> will be placed in the <code>keys</code> array
      */
-    size_t getKeyIndex(K key) const;
+    int getKeyIndex(K key) const;
 
     /**
      * Add a key and record to the node. This method will throw an exception if the node is full
@@ -79,16 +79,28 @@ class InnerNode : public Node {
 public:
     InnerNode() : Node(1, 0) {}
 
+    void setCount(uint16_t value) { count = value; }
+
     /**
      * Get the index where <code>key</code> will be placed in the <code>keys</code> array
      */
-    size_t getKeyIndex(K key) const;
+    int getKeyIndex(K key) const;
 
     /**
-     * Add a key and child to the node. This method will throw an exception if the node is full.
-     * The <code>child</code> will need to contain all keys that are greater than or equal to <code>key</code>
+     * Add a key to the node. This method will throw an exception if the node is full.
+     * Adding a key will not increase the count. The caller has to do that manually, in a safe way.
+     *
+     * @return index where <code>key</code> is added, or `INVALID_INDEX` if the insertion is not successful
      */
-    bool add(K key, PageID child);
+    int addKey(K key);
+
+    /**
+     * Add a <code>child</code> into the node, given the <code>index</code>.
+     * Adding a child will not increase the count. The caller has to do that manually, in a safe way.
+     *
+     * @return <code>true</code> if insertion is successful, <code>false</code> otherwise
+     */
+    bool addChild(PageID child, int index);
 
     static uint16_t getKCapacity() {
         return kCapacity;

@@ -43,3 +43,10 @@ The diagram shows the broader architecture direction; the roadmap below distingu
 ⏳ Distributed transactions / consistency model \
 ⏳ Distributed query execution \
 ⏳ Membership, failure detection, and rebalancing
+
+## Technical Debt
+
+### High priority
+
+1. **Find a page with space for a tuple.** Add a mechanism to the [file manager](docs/design/storage/file-manager.md) to locate an existing page where a tuple will fit, rather than always allocating a new page.
+2. **Bypass the kernel's page cache.** Investigate direct I/O for the [buffer manager](docs/design/buffer/buffer-manager.md) to avoid caching pages in both the buffer pool and the kernel's page cache. Measure the performance impact and account for platform support and I/O alignment requirements.
