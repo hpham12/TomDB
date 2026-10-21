@@ -34,7 +34,7 @@ bool InnerNode<K>::addChild(PageID child, int index) {
         return false;
     }
 
-    for (int i = count - 1; i >= index; --i) {
+    for (int i = count; i >= index; --i) {
         children[i + 1] = children[i];
     }
 

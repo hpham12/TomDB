@@ -111,6 +111,7 @@ endif()
 # --------------------
 
 add_executable(tomdb_tests
+        test/commons_test.cpp
         test/records/field_test.cpp
         test/records/tuple_test.cpp
         test/records/page_test.cpp
