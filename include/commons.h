@@ -18,6 +18,8 @@ inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
 inline constexpr size_t INVALID_VALUE = numeric_limits<uint64_t>::max();
 
+inline constexpr int INVALID_INDEX = numeric_limits<int>::max();
+
 inline constexpr size_t INVALID_FRAME_ID = numeric_limits<size_t>::max();
 
 inline constexpr size_t MAX_SLOTS = 50;
@@ -56,5 +58,16 @@ enum LockMode {
 };
 
 inline constexpr size_t MAX_CACHED_PAGES = 15;
+
+struct Record {
+    PageID pageId = INVALID_PAGE_ID;
+    size_t slotIndex = 0;
+
+    bool operator==(const Record& other) const {
+        return other.pageId == pageId && other.slotIndex == slotIndex;
+    }
+};
+
+inline const Record INVALID_RECORD = Record{.pageId=INVALID_PAGE_ID, .slotIndex=0};
 
 #endif //TOMDB_COMMONS_H

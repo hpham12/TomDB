@@ -17,8 +17,6 @@ class BTree {
   std::unique_ptr<BufferManager> bufferManager = std::make_unique<BufferManager>();
   std::string indexFileId;
   std::string dataFileId;
-  uint16_t innerNodeNumKeys;
-  uint16_t leafNodeNumKeys;
 
 public:
   BTree(std::filesystem::path indexFilePath, std::string indexFileId,
@@ -26,6 +24,7 @@ public:
   bool insert(K key, std::unique_ptr<Tuple> value);
   bool remove(K key);
   std::unique_ptr<Tuple> get(K key);
+  std::vector<std::unique_ptr<Tuple>> getAll(K from , K to);
   bool update(K key, std::unique_ptr<Tuple> newValue);
 };
 
