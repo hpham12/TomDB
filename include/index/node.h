@@ -9,6 +9,8 @@
 #include "gtest/gtest_prod.h"
 #include "commons.h"
 
+// TODO: Add explicit serialization and deserialization for InnerNode and LeafNode instead of relying on compiler's layout
+
 class Node {
 protected:
     PageID id = INVALID_PAGE_ID;
@@ -49,7 +51,7 @@ public:
     /**
      * Get the record, given the <code>key</code>
      *
-     * @return result record if key is found, or <code>nullptr</code> otherwise
+     * @return result record if key is found, or <code>INVALID_RECORD</code> otherwise
      */
     Record getRecord(K key) const;
 

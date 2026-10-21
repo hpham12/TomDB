@@ -18,7 +18,7 @@ int InnerNode<K>::addKey(K key) {
     }
 
     // add key in to keys array
-    for (int i = kCapacity - 2; i >= keyIndex; --i) {
+    for (int i = count - 1; i >= keyIndex; --i) {
         keys[i + 1] = keys[i];
     }
 
@@ -34,7 +34,7 @@ bool InnerNode<K>::addChild(PageID child, int index) {
         return false;
     }
 
-    for (int i = kCapacity - 1; i >= index; --i) {
+    for (int i = count - 1; i >= index; --i) {
         children[i + 1] = children[i];
     }
 
