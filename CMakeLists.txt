@@ -125,6 +125,7 @@ add_executable(tomdb_tests
         test/buffer/page_guard.cpp
         test/index/b_tree.cpp
         test/index/node.cpp
+        test/index/node_serializer_test.cpp
 )
 
 target_link_libraries(tomdb_tests

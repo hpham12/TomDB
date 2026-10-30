@@ -12,6 +12,8 @@ Start with the component map below, then follow the data from values to disk to 
 4. [Buffer manager](buffer/buffer-manager.md) explains the caller-facing pinning API and page lifecycle.
 5. [Frames and guards](buffer/frames-and-guards.md), [frame locks](buffer/frame-lock-table.md), and [replacement policy](buffer/replacement-policy.md) explain buffer ownership, synchronization, and eviction.
 
+The developing index component has a separate [node serialization format and usage guide](index/node-serialization.md).
+
 For an API usage example, go directly to the [buffer manager](buffer/buffer-manager.md#usage). Each component document links to its implementation and existing tests.
 
 ## Component relationships

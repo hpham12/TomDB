@@ -8,10 +8,12 @@
 
 #include "gtest/gtest_prod.h"
 #include "commons.h"
+#include "node_format.h"
 
-// TODO: Add explicit serialization and deserialization for InnerNode and LeafNode instead of relying on compiler's layout
+template<class K> class NodeSerializer;
 
 class Node {
+    template<class K> friend class NodeSerializer;
 protected:
     PageID id = INVALID_PAGE_ID;
     PageID parentId = INVALID_PAGE_ID;
@@ -38,9 +40,10 @@ public:
 
 template<class K>
 class LeafNode : public Node {
-    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 3) - (sizeof(uint16_t) * 2))/(sizeof(Record) + sizeof(K));
+    friend class NodeSerializer<K>;
+    static constexpr uint16_t kCapacity = NodeFormat::Layout<K>::LEAF_CAPACITY;
     std::array<Record, kCapacity> records{};
-    std::array<K, kCapacity> keys;
+    std::array<K, kCapacity> keys{};
     PageID next = INVALID_PAGE_ID;
 
     FRIEND_TEST(LeafNodeTest, GetKeyIndex);
@@ -74,9 +77,10 @@ public:
 
 template<class K>
 class InnerNode : public Node {
-    static constexpr uint16_t kCapacity = (PAGE_SIZE - (sizeof(PageID) * 3) - (sizeof(uint16_t) * 2))/(sizeof(PageID) + sizeof(K));
-    std::array<K, kCapacity> keys;
-    std::array<PageID, kCapacity + 1> children;
+    friend class NodeSerializer<K>;
+    static constexpr uint16_t kCapacity = NodeFormat::Layout<K>::INNER_CAPACITY;
+    std::array<K, kCapacity> keys{};
+    std::array<PageID, kCapacity + 1> children{};
 
     FRIEND_TEST(InnerNodeTest, GetKeyIndex);
 
