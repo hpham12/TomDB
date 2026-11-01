@@ -164,3 +164,15 @@ bool BufferManager::isPinned(const PageID &pageId) const {
 PageID BufferManager::getAvailablePageId(const std::string& fileManagerId) const {
     return storageManager->getAvailablePageId(fileManagerId);
 }
+
+PageID BufferManager::getActivePageId(const std::string& fileManagerId) const {
+    return storageManager->getActivePageId(fileManagerId);
+}
+
+void BufferManager::extend(const std::string& fileManagerId) const {
+    storageManager->extend(fileManagerId);
+}
+
+void BufferManager::extend(const std::string& fileManagerId, size_t maxPageId) const {
+    storageManager->extend(fileManagerId, maxPageId);
+}

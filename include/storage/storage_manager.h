@@ -56,6 +56,9 @@ public:
      * Get an available pageId
      */
     PageID getAvailablePageId(const std::string &fileManagerId);
+
+    // Return the last allocated page; throws std::out_of_range if the file is empty.
+    PageID getActivePageId(const std::string &fileManagerId);
 };
 
 class FileManagerNotRegisteredException : public std::runtime_error {

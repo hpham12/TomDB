@@ -77,3 +77,11 @@ PageID StorageManager::getAvailablePageId(const std::string &fileManagerId) {
 
      return PageID{.fileManagerId=fileManagerId, .fileManagerPageId=fileManagers[fileManagerId]->getAvailablePageId()};
 }
+
+PageID StorageManager::getActivePageId(const std::string &fileManagerId) {
+     if (!fileManagers.contains(fileManagerId)) {
+          throw FileManagerNotRegisteredException();
+     }
+
+     return PageID{.fileManagerId=fileManagerId, .fileManagerPageId=fileManagers[fileManagerId]->getActivePageId()};
+}

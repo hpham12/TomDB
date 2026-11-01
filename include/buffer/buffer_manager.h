@@ -76,6 +76,12 @@ public:
     void registerFileManager(const std::string& fileManagerId, const std::string& filePath) const;
     bool isPinned(const PageID &pageId) const;
     PageID getAvailablePageId(const std::string& fileManagerId) const;
+    // Return the last allocated page; throws std::out_of_range if the file is empty.
+    PageID getActivePageId(const std::string& fileManagerId) const;
+    // Append one initialized page to the file.
+    void extend(const std::string& fileManagerId) const;
+    // Extend the file through maxPageId (inclusive).
+    void extend(const std::string& fileManagerId, size_t maxPageId) const;
 };
 
 #endif //TOMDB_BUFFER_MANAGER_H

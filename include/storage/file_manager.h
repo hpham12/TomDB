@@ -54,6 +54,10 @@ public:
      * Get an available pageId
      */
     size_t getAvailablePageId();
+
+    // Return the last allocated page without extending the file.
+    // Throws std::out_of_range if the file is empty.
+    size_t getActivePageId();
 };
 
 #endif //TOMDB_FILE_MANAGER_H

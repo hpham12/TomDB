@@ -32,13 +32,15 @@ TEST_F(FileManagerTest, InitializationWhenDataFileNotExists) {
     std::filesystem::remove(filePath);
     FileManager fileManager(filePath);
 
-    ASSERT_EQ(fileManager.getNumPages(), 1);
+    ASSERT_EQ(fileManager.getNumPages(), 0);
+    EXPECT_EQ(std::filesystem::file_size(filePath), 0);
 }
 
 TEST_F(FileManagerTest, InitializationWhenFileExistsWithNoData) {
     FileManager fileManager(filePath);
 
-    ASSERT_EQ(fileManager.getNumPages(), 1);
+    ASSERT_EQ(fileManager.getNumPages(), 0);
+    EXPECT_EQ(std::filesystem::file_size(filePath), 0);
 }
 
 TEST_F(FileManagerTest, InitializationWithExistingData) {
@@ -81,6 +83,7 @@ TEST_F(FileManagerTest, LoadExistingPage) {
 
 TEST_F(FileManagerTest, LoadPageOutOfBound) {
     FileManager fileManager(filePath);
+    ASSERT_THROW(fileManager.load(0), std::out_of_range);
     ASSERT_THROW(fileManager.load(2), std::out_of_range);
 }
 
@@ -114,15 +117,16 @@ TEST_F(FileManagerTest, FlushPage) {
 TEST_F(FileManagerTest, FlushPageOutOfBound) {
     Page page;
     FileManager fileManager(filePath);
+    ASSERT_FALSE(fileManager.flush(0, page));
     ASSERT_EQ(fileManager.flush(2, page), false);
 }
 
 TEST_F(FileManagerTest, ExtendPage) {
     FileManager fileManager(filePath);
-    ASSERT_THROW(fileManager.load(1), std::out_of_range);
+    ASSERT_THROW(fileManager.load(0), std::out_of_range);
     fileManager.extend();
 
-    auto page = fileManager.load(1);
+    auto page = fileManager.load(0);
     Slot *slots = reinterpret_cast<Slot*>(page->pageData.get());
     ASSERT_EQ(slots[0].empty, true);
     ASSERT_EQ(slots[0].offset, INVALID_VALUE);
@@ -187,7 +191,7 @@ TEST_F(FileManagerTest, ReopenPreservesPagesAndExtensionDoesNotOverwriteData) {
 
 TEST_F(FileManagerTest, GetAvailablePageIdAppendsInitializedPages) {
     FileManager fileManager(filePath);
-    for (size_t expectedId = 1; expectedId <= 2; ++expectedId) {
+    for (size_t expectedId = 0; expectedId < 2; ++expectedId) {
         const auto pageId = fileManager.getAvailablePageId();
         ASSERT_EQ(pageId, expectedId);
         ASSERT_EQ(fileManager.getNumPages(), expectedId + 1);
@@ -199,5 +203,18 @@ TEST_F(FileManagerTest, GetAvailablePageIdAppendsInitializedPages) {
             EXPECT_EQ(slots[i].offset, INVALID_VALUE);
             EXPECT_EQ(slots[i].size, INVALID_VALUE);
         }
+    }
+}
+
+TEST_F(FileManagerTest, GetActivePageIdReturnsLastPageWithoutAllocating) {
+    FileManager manager(filePath);
+    EXPECT_THROW(manager.getActivePageId(), std::out_of_range);
+    EXPECT_EQ(manager.getNumPages(), 0);
+    for (size_t i = 0; i < 2; ++i) {
+        const auto allocated = manager.getAvailablePageId();
+        EXPECT_EQ(manager.getActivePageId(), allocated);
+        EXPECT_EQ(manager.getActivePageId(), allocated);
+        EXPECT_EQ(manager.getNumPages(), i + 1);
+        EXPECT_EQ(std::filesystem::file_size(filePath), (i + 1) * PAGE_SIZE);
     }
 }

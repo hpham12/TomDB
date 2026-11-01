@@ -26,6 +26,11 @@ public:
   std::unique_ptr<Tuple> get(K key);
   std::vector<std::unique_ptr<Tuple>> getAll(K from , K to);
   bool update(K key, std::unique_ptr<Tuple> newValue);
+
+  // methods for testing
+  [[nodiscard]] PageID getRootId() const {
+    return rootId;
+  }
 };
 
 #include "b_tree.tpp"

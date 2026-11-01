@@ -6,6 +6,25 @@
 
 using Codec = NodeSerializer<int32_t>;
 
+TEST(NodeSerializerTest, IdentifiesNodeKindFromSerializedPrefix) {
+    const auto leaf = Codec::serialize(LeafNode<int32_t>{});
+    const auto inner = Codec::serialize(InnerNode<int32_t>{});
+    EXPECT_TRUE(Codec::isLeaf(leaf));
+    EXPECT_FALSE(Codec::isLeaf(inner));
+    EXPECT_TRUE(Codec::isLeaf(std::span<const char>(leaf.data(), 8)));
+    for (size_t size = 0; size < 8; ++size) {
+        EXPECT_THROW(Codec::isLeaf(std::span<const char>(leaf.data(), size)), std::invalid_argument);
+    }
+    for (size_t offset : {0u, 4u, 5u, 6u, 7u}) {
+        auto invalid = leaf;
+        invalid[offset] = static_cast<char>(255);
+        EXPECT_THROW(Codec::isLeaf(invalid), std::invalid_argument) << offset;
+    }
+    EXPECT_THROW(NodeSerializer<uint32_t>::isLeaf(leaf), std::invalid_argument);
+    const std::vector<char> oversized(PAGE_SIZE + 1);
+    EXPECT_THROW(Codec::isLeaf(oversized), std::invalid_argument);
+}
+
 TEST(NodeSerializerTest, LeafRoundTripPreservesRecordsAndSignedKeys) {
     LeafNode<int32_t> node;
     const Record low{.pageId={"data", 65536}, .slotIndex=3};
