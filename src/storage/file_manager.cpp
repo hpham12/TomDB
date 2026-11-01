@@ -39,9 +39,6 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
     }
 
     numPages = fileSize / PAGE_SIZE;
-    if (numPages == 0) {
-        extend();
-    }
 }
 
 std::unique_ptr<Page> FileManager::load(size_t pageId) {
@@ -124,6 +121,15 @@ size_t FileManager::getAvailablePageId() {
 
     return availablePage;
 }
+
+size_t FileManager::getActivePageId() {
+    std::lock_guard lock(mutex);
+    if (numPages == 0) {
+        throw std::out_of_range("File has no active page");
+    }
+    return numPages - 1;
+}
+
 
 size_t FileManager::getNumPages() {
     std::lock_guard lock(mutex);

@@ -5,15 +5,18 @@
 #ifndef TOMDB_NODE_H
 #define TOMDB_NODE_H
 #include <array>
+#include <iostream>
 
 #include "gtest/gtest_prod.h"
 #include "commons.h"
 #include "node_format.h"
 
 template<class K> class NodeSerializer;
+template<class K> class BTree;
 
 class Node {
     template<class K> friend class NodeSerializer;
+    template<class K> friend class BTree;
 protected:
     PageID id = INVALID_PAGE_ID;
     PageID parentId = INVALID_PAGE_ID;
@@ -24,8 +27,14 @@ public:
     [[nodiscard]] PageID getParentId() const { return this->parentId; }
     [[nodiscard]] PageID getId() const { return id; }
 
+    void setId(const PageID &nodeId) { this->id = nodeId; }
+
     virtual bool isLeaf() {
         return level == 0;
+    }
+
+    void incrementCount() {
+        count++;
     }
 
     Node(uint16_t level = 0, uint16_t count = 0)
@@ -41,6 +50,7 @@ public:
 template<class K>
 class LeafNode : public Node {
     friend class NodeSerializer<K>;
+    friend class BTree<K>;
     static constexpr uint16_t kCapacity = NodeFormat::Layout<K>::LEAF_CAPACITY;
     std::array<Record, kCapacity> records{};
     std::array<K, kCapacity> keys{};
@@ -73,11 +83,14 @@ public:
     static uint16_t getKCapacity() {
         return kCapacity;
     }
+
+    PageID getNext() const { return next; }
 };
 
 template<class K>
 class InnerNode : public Node {
     friend class NodeSerializer<K>;
+    friend class BTree<K>;
     static constexpr uint16_t kCapacity = NodeFormat::Layout<K>::INNER_CAPACITY;
     std::array<K, kCapacity> keys{};
     std::array<PageID, kCapacity + 1> children{};

@@ -147,6 +147,31 @@ private:
 public:
     using PageBytes = std::array<char, PAGE_SIZE>;
 
+    // Inspect the format prefix without deserializing the node payload.
+    // Malformed/truncated prefixes and incompatible key encodings are rejected.
+    static bool isLeaf(std::span<const char> bytes) {
+        if (bytes.size() > PAGE_SIZE) {
+            throw std::invalid_argument("Input exceeds PAGE_SIZE");
+        }
+        Reader in{bytes};
+        for (char c: std::string_view("TND1")) {
+            if (in.integer(1) != static_cast<unsigned char>(c)) {
+                throw std::invalid_argument("Invalid node magic");
+            }
+        }
+        if (in.integer(1) != 1) {
+            throw std::invalid_argument("Unsupported node version");
+        }
+        const auto kind = in.integer(1);
+        if (kind > 1) {
+            throw std::invalid_argument("Invalid node kind");
+        }
+        if (in.integer(1) != sizeof(K) || in.integer(1) != (std::is_signed_v<K> ? 1u : 0u)) {
+            throw std::invalid_argument("Wrong key encoding");
+        }
+        return kind == 0;
+    }
+
     static PageBytes serialize(const LeafNode<K> &node) {
         PageBytes bytes{};
         Writer out{bytes};
