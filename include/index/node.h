@@ -115,6 +115,7 @@ class InnerNode : public Node {
 
     FRIEND_TEST(InnerNodeTest, GetKeyIndex);
     FRIEND_TEST(BTreeTest, InsertSplitsInnerRoot);
+    FRIEND_TEST(BTreeTest, InsertSplitsInnerWithParent);
 
 public:
     InnerNode() : Node(1, 0) {

@@ -131,6 +131,7 @@ bool BTree<K>::insert(K key, std::unique_ptr<Tuple> value) {
 
         auto newChildId = castedNode->children[keyIndex];
         if (newChildId != childId) {
+            childPage = bufferManager->pinPage(newChildId, EXCLUSIVE);
             childBytes = {childPage->pageData.get(), PAGE_SIZE};
             isChildLeaf = NodeSerializer<K>::isLeaf(childBytes);
             if (isChildLeaf) {
@@ -229,12 +230,70 @@ std::vector<std::unique_ptr<Tuple> > getAll(K from, K to) {
 
 template<typename K>
 void BTree<K>::splitInnerNode(InnerNode<K> *childNode, InnerNode<K> *parentNode) {
-    // // Find median key
-    // auto midIndex = InnerNode<K>::kCapacity / 2;
-    // auto midKey = childNode->keys[midIndex];
-    //
-    // // Split into sibling node
-    // childNode->setCount(midIndex);
+    // Find median key
+    auto midIndex = InnerNode<K>::kCapacity / 2;
+    auto midKey = childNode->keys[midIndex];
+
+    // Split into sibling node
+    childNode->setCount(midIndex);
+
+    auto newNodeId = bufferManager->getAvailablePageId(indexFileId);
+
+    InnerNode<K> newNode;
+    newNode.id = newNodeId;
+
+    newNode.children[0] = childNode->children[midIndex + 1];
+    newNode.level = childNode->level;
+
+    for (int i = midIndex + 1; i < InnerNode<K>::kCapacity; i++) {
+        newNode.keys[newNode.count] = childNode->keys[i];
+        newNode.children[newNode.count + 1] = childNode->children[i + 1];
+        newNode.incrementCount();
+    }
+
+    // re-organize children's parent pointers
+    for (int i = 0; i <= newNode.count; i++) {
+        auto childPage = bufferManager->pinPage(newNode.children[i], EXCLUSIVE);
+        std::span<const char> childBytes(childPage->pageData.get(), PAGE_SIZE);
+        auto isChildLeaf = NodeSerializer<K>::isLeaf(childBytes);
+        PageID childId;
+        if (isChildLeaf) {
+            auto leaf = NodeSerializer<K>::deserializeLeaf(childBytes);
+            childId = leaf.id;
+            leaf.parentId = newNodeId;
+            memcpy(childPage->pageData.get(), NodeSerializer<K>::serialize(leaf).data(), PAGE_SIZE);
+        } else {
+            auto inner = NodeSerializer<K>::deserializeInner(childBytes);
+            childId = inner.id;
+            inner.parentId = newNodeId;
+            memcpy(childPage->pageData.get(), NodeSerializer<K>::serialize(inner).data(), PAGE_SIZE);
+        }
+
+        bufferManager->flushPage(childId);
+    }
+
+    // bubble to split key and child to parent node
+    // Because we do preemptive splitting, parent node will always have capacity
+    auto keyIndex = parentNode->addKey(midKey);
+    parentNode->addChild(newNodeId, keyIndex + 1);
+    parentNode->incrementCount();
+
+    // Make sure new node points to parent
+    newNode.parentId = parentNode->getId();
+
+    // flush change to new pages
+    auto newNodePage = bufferManager->pinPage(newNodeId, SHARED);
+    memcpy(newNodePage->pageData.get(), NodeSerializer<K>::serialize(newNode).data(), PAGE_SIZE);
+
+    auto nodePage = bufferManager->pinPage(childNode->id, SHARED);
+    memcpy(nodePage->pageData.get(), NodeSerializer<K>::serialize(*childNode).data(), PAGE_SIZE);
+
+    auto newParentNodePage = bufferManager->pinPage(parentNode->getId(), SHARED);
+    memcpy(newParentNodePage->pageData.get(), NodeSerializer<K>::serialize(*parentNode).data(), PAGE_SIZE);
+
+    bufferManager->flushPage(newNodeId);
+    bufferManager->flushPage(childNode->id);
+    bufferManager->flushPage(parentNode->getId());
 }
 
 template<typename K>
@@ -250,6 +309,7 @@ void BTree<K>::splitInnerNode(InnerNode<K> *node) {
 
     InnerNode<K> newNode;
     newNode.id = newNodeId;
+    newNode.level = node->level;
 
     newNode.children[0] = node->children[midIndex + 1];
 

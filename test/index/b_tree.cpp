@@ -367,3 +367,123 @@ TEST(BTreeTest, InsertSplitsInnerRoot) {
     EXPECT_EQ(nextLeafId, INVALID_PAGE_ID);
     EXPECT_EQ(visitedLeaves.size(), innerCapacity + 1);
 }
+
+TEST(BTreeTest, InsertSplitsInnerWithParent) {
+    auto dataFilePath = generateRandomFilePath();
+    auto indexFilePath = generateRandomFilePath();
+    BTree<int> tree(indexFilePath, "index", dataFilePath, "data");
+    const auto originalLeafId = tree.getRootId();
+    const int leafCapacity = LeafNode<int>::getKCapacity();
+    const int innerCapacity = InnerNode<int>::getKCapacity();
+    const int leafMidpoint = leafCapacity / 2;
+    const int innerMidpoint = innerCapacity / 2;
+    // After the inner root splits, its right child has innerCapacity -
+    // innerMidpoint - 1 keys. Another innerMidpoint + 1 leaf splits fills it.
+    // Ascending insertions cause a leaf split every leafMidpoint keys.
+    const int lastKey = leafCapacity + (innerCapacity + innerMidpoint) * leafMidpoint + 1;
+    auto makeTuple = [](int key) {
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(1));
+        tuple->addField(std::make_unique<Field>((float) 123.123));
+        tuple->addField(std::make_unique<Field>("Hello World"));
+        tuple->addField(std::make_unique<Field>(key));
+        return tuple;
+    };
+    for (int key = 0; key < lastKey; ++key) {
+        SCOPED_TRACE(key);
+        ASSERT_TRUE(tree.insert(key, makeTuple(key)));
+    }
+
+    // Confirm the target is a full inner child under a root that has room.
+    const auto rootId = tree.getRootId();
+    FileManager file(indexFilePath);
+    auto rootPage = file.load(rootId.fileManagerPageId);
+    ASSERT_FALSE(NodeSerializer<int>::isLeaf({rootPage->pageData.get(), PAGE_SIZE}));
+    auto beforeRoot = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+    ASSERT_EQ(beforeRoot.getLevel(), 2);
+    ASSERT_EQ(beforeRoot.getCount(), 1);
+    const auto targetId = beforeRoot.children[1];
+    auto targetPage = file.load(targetId.fileManagerPageId);
+    ASSERT_FALSE(NodeSerializer<int>::isLeaf({targetPage->pageData.get(), PAGE_SIZE}));
+    auto beforeTarget = NodeSerializer<int>::deserializeInner({targetPage->pageData.get(), PAGE_SIZE});
+    ASSERT_EQ(beforeTarget.getLevel(), 1);
+    ASSERT_EQ(beforeTarget.getParentId(), rootId);
+    ASSERT_EQ(beforeTarget.getCount(), innerCapacity);
+
+    // The next insertion must split that child into the existing root,
+    // promoting its median without increasing the height of the tree.
+    ASSERT_TRUE(tree.insert(lastKey, makeTuple(lastKey)));
+    ASSERT_EQ(tree.getRootId(), rootId);
+    file.refresh();
+    rootPage = file.load(rootId.fileManagerPageId);
+    auto root = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+    EXPECT_EQ(root.getId(), rootId);
+    EXPECT_EQ(root.getParentId(), INVALID_PAGE_ID);
+    EXPECT_EQ(root.getLevel(), 2);
+    ASSERT_EQ(root.getCount(), 2);
+    EXPECT_EQ(root.keys[0], beforeRoot.keys[0]);
+    EXPECT_EQ(root.keys[1], beforeTarget.keys[innerMidpoint]);
+    EXPECT_EQ(root.children[0], beforeRoot.children[0]);
+    EXPECT_EQ(root.children[1], targetId);
+    ASSERT_NE(root.children[2], INVALID_PAGE_ID);
+    ASSERT_NE(root.children[2], root.children[0]);
+    ASSERT_NE(root.children[2], targetId);
+
+    // Walk all three persisted inner nodes, checking that the split preserves
+    // the target's keys and child ordering and reparents the moved leaves.
+    FileManager dataFile(dataFilePath);
+    std::set<size_t> visitedLeaves;
+    PageID nextLeafId = originalLeafId;
+    int nextKey = 0;
+    for (int side = 0; side < 3; ++side) {
+        SCOPED_TRACE(side);
+        auto innerPage = file.load(root.children[side].fileManagerPageId);
+        ASSERT_FALSE(NodeSerializer<int>::isLeaf({innerPage->pageData.get(), PAGE_SIZE}));
+        auto inner = NodeSerializer<int>::deserializeInner({innerPage->pageData.get(), PAGE_SIZE});
+        EXPECT_EQ(inner.getId(), root.children[side]);
+        EXPECT_EQ(inner.getParentId(), rootId);
+        EXPECT_EQ(inner.getLevel(), 1);
+        ASSERT_EQ(inner.getCount(), side < 2 ? innerMidpoint : innerCapacity - innerMidpoint - 1);
+        if (side > 0) {
+            for (int i = 0; i < inner.getCount(); ++i) {
+                EXPECT_EQ(inner.keys[i], beforeTarget.keys[side == 1 ? i : innerMidpoint + 1 + i]);
+            }
+        }
+        for (int child = 0; child <= inner.getCount(); ++child) {
+            SCOPED_TRACE(child);
+            const auto leafId = inner.children[child];
+            if (side > 0) {
+                EXPECT_EQ(leafId, beforeTarget.children[side == 1 ? child : innerMidpoint + 1 + child]);
+            }
+            ASSERT_EQ(leafId, nextLeafId);
+            ASSERT_TRUE(visitedLeaves.insert(leafId.fileManagerPageId).second);
+            auto leafPage = file.load(leafId.fileManagerPageId);
+            ASSERT_TRUE(NodeSerializer<int>::isLeaf({leafPage->pageData.get(), PAGE_SIZE}));
+            auto leaf = NodeSerializer<int>::deserializeLeaf({leafPage->pageData.get(), PAGE_SIZE});
+            EXPECT_EQ(leaf.getId(), leafId);
+            EXPECT_EQ(leaf.getParentId(), inner.getId());
+            ASSERT_GT(leaf.getCount(), 0);
+            ASSERT_LE(leaf.getCount(), leafCapacity);
+            // Verify every key routes through both inner levels to the correct
+            // leaf, then read its complete tuple directly from the data file.
+            for (int slot = 0; slot < leaf.getCount(); ++slot, ++nextKey) {
+                SCOPED_TRACE(nextKey);
+                ASSERT_LE(nextKey, lastKey);
+                EXPECT_EQ(root.getKeyIndex(nextKey), side);
+                EXPECT_EQ(inner.getKeyIndex(nextKey), child);
+                const auto record = leaf.getRecord(nextKey);
+                ASSERT_NE(record, INVALID_RECORD);
+                ASSERT_EQ(record.pageId.fileManagerId, "data");
+                auto dataPage = dataFile.load(record.pageId.fileManagerPageId);
+                auto persistedTuple = dataPage->getTuple(record.slotIndex);
+                ASSERT_NE(persistedTuple, nullptr);
+                EXPECT_EQ(persistedTuple->serialize(), makeTuple(nextKey)->serialize());
+            }
+            nextLeafId = leaf.getNext();
+        }
+    }
+    // No tuple or leaf may be lost, duplicated, or disconnected by the split.
+    EXPECT_EQ(nextKey, lastKey + 1);
+    EXPECT_EQ(nextLeafId, INVALID_PAGE_ID);
+    EXPECT_EQ(visitedLeaves.size(), innerCapacity + innerMidpoint + 2);
+}
