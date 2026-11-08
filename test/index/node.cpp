@@ -7,6 +7,12 @@
 
 #include "index/node.h"
 
+TEST(NodeTest, IsFullRequiresConcreteNodeType) {
+    // Only leaf and inner nodes define a capacity.
+    Node node;
+    EXPECT_THROW(node.isFull(), std::logic_error);
+}
+
 TEST(LeafNodeTest, IsFullOnlyAfterReachingCapacity) {
     LeafNode<int> node;
     Node& base = node;
