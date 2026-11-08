@@ -29,6 +29,8 @@ protected:
     uint16_t count;
 
 public:
+    Node(Node &node) = default;
+
     [[nodiscard]] PageID getParentId() const { return this->parentId; }
     [[nodiscard]] PageID getId() const { return id; }
 
@@ -70,6 +72,8 @@ class LeafNode : public Node {
 public:
     LeafNode() : Node(0, 0) {
     }
+
+    LeafNode(LeafNode &node) = default;
 
     /**
      * Get the record, given the <code>key</code>
@@ -114,6 +118,8 @@ class InnerNode : public Node {
 public:
     InnerNode() : Node(1, 0) {
     }
+
+    InnerNode(InnerNode &node) = default;
 
     void setCount(uint16_t value) { count = value; }
 

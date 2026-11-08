@@ -43,7 +43,7 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
 
 std::unique_ptr<Page> FileManager::load(size_t pageId) {
     std::lock_guard lock(mutex);
-    if (pageId >= numPages) {
+    if (pageId > numPages) {
         throw std::out_of_range("Requested page not exist");
     }
 
@@ -57,7 +57,7 @@ std::unique_ptr<Page> FileManager::load(size_t pageId) {
 
 bool FileManager::flush(size_t pageId, const Page &page) {
     std::lock_guard lock(mutex);
-    if (pageId >= numPages) {
+    if (pageId > numPages) {
         std::cerr << "Requested page not exist" << '\n';
         return false;
     }
@@ -127,7 +127,7 @@ size_t FileManager::getActivePageId() {
     if (numPages == 0) {
         throw std::out_of_range("File has no active page");
     }
-    return numPages - 1;
+    return numPages;
 }
 
 

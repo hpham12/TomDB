@@ -13,6 +13,9 @@ class Tuple {
     std::vector<std::unique_ptr<Field>> fields;
 
 public:
+    // Return an independent copy of this tuple and all its fields.
+    std::unique_ptr<Tuple> clone() const;
+
     static std::unique_ptr<Tuple> deserialize(std::istream &in);
 
     /**

@@ -51,8 +51,6 @@ class BufferManager {
 
     void evictPage();
 
-    void unpinPage(const PageID &pageId);
-
     FRIEND_TEST(BufferManagerTest, EvictPage);
     FRIEND_TEST(BufferManagerTest, EvictPageFailsWithNoEvictablePage);
     FRIEND_TEST(BufferManagerTest, EvictPageFlushesDirtyPage);
@@ -69,6 +67,7 @@ class BufferManager {
     friend class PageGuard;
 public:
     BufferManager();
+    void unpinPage(const PageID &pageId);
     PageGuard pinPage(const PageID& pageId, LockMode lockMode);
     void flushPage(const PageID &pageId);
     void flushUncachedPage(PageID pageId, Page &page) const;

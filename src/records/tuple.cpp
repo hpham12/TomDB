@@ -3,7 +3,17 @@
 //
 
 #include "records/tuple.h"
+
 #include <sstream>
+
+std::unique_ptr<Tuple> Tuple::clone() const {
+    auto copy = std::make_unique<Tuple>();
+    copy->fields.reserve(fields.size());
+    for (const auto &field : fields) {
+        copy->fields.push_back(field->clone());
+    }
+    return copy;
+}
 
 void Tuple::addField(std::unique_ptr<Field> field) {
     fields.push_back(field->clone());
@@ -11,7 +21,7 @@ void Tuple::addField(std::unique_ptr<Field> field) {
 
 uint32_t Tuple::getSize() {
     uint32_t totalSize = 0;
-    for (std::unique_ptr<Field> &field : fields) {
+    for (std::unique_ptr<Field> &field: fields) {
         totalSize += field->getSize();
     }
 
@@ -24,9 +34,9 @@ std::string Tuple::serialize() {
     uint32_t totalSize = getSize();
 
     std::stringstream stream;
-    stream.write(reinterpret_cast<const char*>(&totalSize), sizeof(totalSize));
+    stream.write(reinterpret_cast<const char *>(&totalSize), sizeof(totalSize));
 
-    for (const auto & field : fields) {
+    for (const auto &field: fields) {
         stream << field->serialize();
     }
 
@@ -35,7 +45,7 @@ std::string Tuple::serialize() {
 
 std::unique_ptr<Tuple> Tuple::deserialize(std::istream &in) {
     uint32_t tupleSize;
-    in.read(reinterpret_cast<char*>(&tupleSize), sizeof(tupleSize));
+    in.read(reinterpret_cast<char *>(&tupleSize), sizeof(tupleSize));
     std::unique_ptr<Tuple> tuple = std::make_unique<Tuple>();
 
     uint32_t totalSize = sizeof(tupleSize);

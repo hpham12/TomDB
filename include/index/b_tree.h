@@ -33,15 +33,15 @@ public:
     return rootId;
   }
 
-  void splitInnerNode(InnerNode<K> childNode, InnerNode<K> parentNode);
+  void splitInnerNode(InnerNode<K> *childNode, InnerNode<K> *parentNode);
 
   // This method should only be used for root node
-  void splitInnerNode(InnerNode<K> childNode);
+  void splitInnerNode(InnerNode<K> *childNode);
 
-  void splitLeafNode(LeafNode<K> childNode, InnerNode<K> parentNode);
+  void splitLeafNode(LeafNode<K> *childNode,InnerNode<K> *parentNode);
 
   // This method should only be used for root node
-  void splitLeafNode(LeafNode<K> childNode);
+  void splitLeafNode(LeafNode<K> *childNode);
 };
 
 #include "b_tree.tpp"
