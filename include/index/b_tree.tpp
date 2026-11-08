@@ -229,7 +229,12 @@ std::vector<std::unique_ptr<Tuple> > getAll(K from, K to) {
 
 template<typename K>
 void BTree<K>::splitInnerNode(InnerNode<K> *childNode, InnerNode<K> *parentNode) {
-    throw std::logic_error("Method not implemented");
+    // // Find median key
+    // auto midIndex = InnerNode<K>::kCapacity / 2;
+    // auto midKey = childNode->keys[midIndex];
+    //
+    // // Split into sibling node
+    // childNode->setCount(midIndex);
 }
 
 template<typename K>
@@ -246,12 +251,33 @@ void BTree<K>::splitInnerNode(InnerNode<K> *node) {
     InnerNode<K> newNode;
     newNode.id = newNodeId;
 
-    newNode.children[0] = node->children[midIndex + 2];
+    newNode.children[0] = node->children[midIndex + 1];
 
     for (int i = midIndex + 1; i < InnerNode<K>::kCapacity; i++) {
         newNode.keys[newNode.count] = node->keys[i];
         newNode.children[newNode.count + 1] = node->children[i + 1];
         newNode.incrementCount();
+    }
+
+    // re-organize children's parent pointers
+    for (int i = 0; i <= newNode.count; i++) {
+        auto childPage = bufferManager->pinPage(newNode.children[i], EXCLUSIVE);
+        std::span<const char> childBytes(childPage->pageData.get(), PAGE_SIZE);
+        auto isChildLeaf = NodeSerializer<K>::isLeaf(childBytes);
+        PageID childId;
+        if (isChildLeaf) {
+            auto leaf = NodeSerializer<K>::deserializeLeaf(childBytes);
+            childId = leaf.id;
+            leaf.parentId = newNodeId;
+            memcpy(childPage->pageData.get(), NodeSerializer<K>::serialize(leaf).data(), PAGE_SIZE);
+        } else {
+            auto inner = NodeSerializer<K>::deserializeInner(childBytes);
+            childId = inner.id;
+            inner.parentId = newNodeId;
+            memcpy(childPage->pageData.get(), NodeSerializer<K>::serialize(inner).data(), PAGE_SIZE);
+        }
+
+        bufferManager->flushPage(childId);
     }
 
     // create new parent node

@@ -114,6 +114,7 @@ class InnerNode : public Node {
     std::array<PageID, kCapacity + 1> children{};
 
     FRIEND_TEST(InnerNodeTest, GetKeyIndex);
+    FRIEND_TEST(BTreeTest, InsertSplitsInnerRoot);
 
 public:
     InnerNode() : Node(1, 0) {

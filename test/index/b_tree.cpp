@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <set>
 
 #include "../test_utils.h"
 #include "index/b_tree.h"
@@ -240,4 +241,129 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
         expected.addField(std::make_unique<Field>(key));
         EXPECT_EQ(persistedTuple->serialize(), expected.serialize());
     }
+}
+
+TEST(BTreeTest, InsertSplitsInnerRoot) {
+    auto dataFilePath = generateRandomFilePath();
+    auto indexFilePath = generateRandomFilePath();
+    BTree<int> tree(indexFilePath, "index", dataFilePath, "data");
+    const auto originalLeafId = tree.getRootId();
+    const int leafCapacity = LeafNode<int>::getKCapacity();
+    const int innerCapacity = InnerNode<int>::getKCapacity();
+    const int leafMidpoint = leafCapacity / 2;
+    const int innerMidpoint = innerCapacity / 2;
+    // Ascending keys always fill the rightmost leaf. Inserting key leafCapacity
+    // creates the inner root with one separator. Each subsequent leafMidpoint
+    // insertions splits another leaf and adds one more separator to that root.
+    // Insert keys [0, lastKey) to fill the inner root exactly; reserve lastKey
+    // for the next insertion, which triggers the preemptive inner-root split.
+    const int lastKey = leafCapacity + (innerCapacity - 1) * leafMidpoint + 1;
+    auto makeTuple = [](int key) {
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(1));
+        tuple->addField(std::make_unique<Field>((float) 123.123));
+        tuple->addField(std::make_unique<Field>("Hello World"));
+        tuple->addField(std::make_unique<Field>(key));
+        return tuple;
+    };
+    for (int key = 0; key < lastKey; ++key) {
+        SCOPED_TRACE(key);
+        ASSERT_TRUE(tree.insert(key, makeTuple(key)));
+    }
+
+    // Read the full root from disk and save its keys and child ordering so we
+    // can verify that the split preserves every subtree in the correct position.
+    const auto oldRootId = tree.getRootId();
+    ASSERT_NE(oldRootId, originalLeafId);
+    FileManager file(indexFilePath);
+    auto oldRootPage = file.load(oldRootId.fileManagerPageId);
+    ASSERT_FALSE(NodeSerializer<int>::isLeaf({oldRootPage->pageData.get(), PAGE_SIZE}));
+    auto oldRoot = NodeSerializer<int>::deserializeInner({oldRootPage->pageData.get(), PAGE_SIZE});
+    ASSERT_EQ(oldRoot.getLevel(), 1);
+    ASSERT_EQ(oldRoot.getCount(), innerCapacity);
+    ASSERT_EQ(oldRoot.getParentId(), INVALID_PAGE_ID);
+    const auto oldChildren = oldRoot.children;
+    const int promotedKey = oldRoot.keys[innerMidpoint];
+
+    // The next insertion preemptively splits the full inner root.
+    ASSERT_TRUE(tree.insert(lastKey, makeTuple(lastKey)));
+    ASSERT_NE(tree.getRootId(), oldRootId);
+    // Refresh the file reader after insertion so assertions see the newly
+    // persisted pages rather than bytes buffered before the split.
+    file.refresh();
+    auto rootPage = file.load(tree.getRootId().fileManagerPageId);
+    ASSERT_FALSE(NodeSerializer<int>::isLeaf({rootPage->pageData.get(), PAGE_SIZE}));
+    auto root = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+    // The tree gains one level: a new root with the promoted median separator,
+    // the original inner node on the left, and a new inner sibling on the right.
+    EXPECT_EQ(root.getId(), tree.getRootId());
+    EXPECT_EQ(root.getParentId(), INVALID_PAGE_ID);
+    EXPECT_EQ(root.getLevel(), 2);
+    ASSERT_EQ(root.getCount(), 1);
+    EXPECT_EQ(root.keys[0], promotedKey);
+    ASSERT_EQ(root.children[0], oldRootId);
+    ASSERT_NE(root.children[1], INVALID_PAGE_ID);
+    ASSERT_NE(root.children[1], oldRootId);
+
+    // Walk both inner nodes and their leaves in key order. Cross-check the
+    // parent-child traversal against the leaf chain, detecting skipped or
+    // duplicated leaves as well as incorrect parent pointers.
+    std::set<size_t> visitedLeaves;
+    int nextKey = 0;
+    PageID nextLeafId = originalLeafId;
+    FileManager dataFile(dataFilePath);
+    for (int side = 0; side < 2; ++side) {
+        SCOPED_TRACE(side);
+        auto innerPage = file.load(root.children[side].fileManagerPageId);
+        ASSERT_FALSE(NodeSerializer<int>::isLeaf({innerPage->pageData.get(), PAGE_SIZE}));
+        auto inner = NodeSerializer<int>::deserializeInner({innerPage->pageData.get(), PAGE_SIZE});
+        EXPECT_EQ(inner.getId(), root.children[side]);
+        EXPECT_EQ(inner.getParentId(), tree.getRootId());
+        EXPECT_EQ(inner.getLevel(), 1);
+        // The median moves up into the new root, so neither inner child retains it.
+        ASSERT_EQ(inner.getCount(), side == 0 ? innerMidpoint : innerCapacity - innerMidpoint - 1);
+        for (int i = 0; i < inner.getCount(); ++i) {
+            EXPECT_EQ(inner.keys[i], oldRoot.keys[side == 0 ? i : innerMidpoint + 1 + i]);
+        }
+        // An inner node has one more child than keys. The right sibling's first
+        // child must be the old child at innerMidpoint + 1, immediately to the
+        // right of the promoted separator.
+        for (int child = 0; child <= inner.getCount(); ++child) {
+            SCOPED_TRACE(child);
+            const auto leafId = inner.children[child];
+            ASSERT_EQ(leafId, oldChildren[side == 0 ? child : innerMidpoint + 1 + child]);
+            ASSERT_EQ(leafId, nextLeafId);
+            ASSERT_TRUE(visitedLeaves.insert(leafId.fileManagerPageId).second);
+            auto leafPage = file.load(leafId.fileManagerPageId);
+            ASSERT_TRUE(NodeSerializer<int>::isLeaf({leafPage->pageData.get(), PAGE_SIZE}));
+            auto leaf = NodeSerializer<int>::deserializeLeaf({leafPage->pageData.get(), PAGE_SIZE});
+            EXPECT_EQ(leaf.getId(), leafId);
+            EXPECT_EQ(leaf.getParentId(), inner.getId());
+            ASSERT_GT(leaf.getCount(), 0);
+            ASSERT_LE(leaf.getCount(), leafCapacity);
+            // Keys were inserted consecutively, so each leaf must contain the
+            // next range of keys. Verify both levels route each key to this leaf.
+            for (int slot = 0; slot < leaf.getCount(); ++slot, ++nextKey) {
+                SCOPED_TRACE(nextKey);
+                ASSERT_LE(nextKey, lastKey);
+                EXPECT_EQ(root.getKeyIndex(nextKey), side);
+                EXPECT_EQ(inner.getKeyIndex(nextKey), child);
+                const auto record = leaf.getRecord(nextKey);
+                ASSERT_NE(record, INVALID_RECORD);
+                ASSERT_EQ(record.pageId.fileManagerId, "data");
+                // Follow the saved record directly into the data file and compare
+                // the entire tuple, verifying persistence independently of the cache.
+                auto dataPage = dataFile.load(record.pageId.fileManagerPageId);
+                auto persistedTuple = dataPage->getTuple(record.slotIndex);
+                ASSERT_NE(persistedTuple, nullptr);
+                EXPECT_EQ(persistedTuple->serialize(), makeTuple(nextKey)->serialize());
+            }
+            nextLeafId = leaf.getNext();
+        }
+    }
+    // Every inserted tuple must be reachable exactly once. Splitting an inner
+    // root redistributes its leaves without adding or removing any leaf pages.
+    EXPECT_EQ(nextKey, lastKey + 1);
+    EXPECT_EQ(nextLeafId, INVALID_PAGE_ID);
+    EXPECT_EQ(visitedLeaves.size(), innerCapacity + 1);
 }
