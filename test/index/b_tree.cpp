@@ -188,6 +188,7 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
     tuple->addField(std::make_unique<Field>(lastKey));
     ASSERT_TRUE(tree.insert(lastKey, std::move(tuple)));
 
+    file.refresh();
     ASSERT_EQ(tree.getRootId(), parentId);
     parentPage = file.load(parentId.fileManagerPageId);
     parent = NodeSerializer<int>::deserializeInner({parentPage->pageData.get(), PAGE_SIZE});
@@ -216,12 +217,27 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
     EXPECT_EQ(right.getCount(), capacity - midpoint + 1);
     EXPECT_EQ(right.getLevel(), 0);
     EXPECT_EQ(right.getNext(), INVALID_PAGE_ID);
+    FileManager dataFile(dataFilePath);
     for (int key = 0; key <= lastKey; ++key) {
         SCOPED_TRACE(key);
         const int childIndex = key < midpoint ? 0 : key < 2 * midpoint ? 1 : 2;
         EXPECT_EQ(parent.getKeyIndex(key), childIndex);
         const auto record = childIndex == 0 ? left.getRecord(key)
                           : childIndex == 1 ? middle.getRecord(key) : right.getRecord(key);
-        EXPECT_NE(record, INVALID_RECORD);
+        ASSERT_NE(record, INVALID_RECORD);
+
+        // Follow the persisted leaf record into the data file, bypassing the buffer cache.
+        ASSERT_EQ(record.pageId.fileManagerId, "data");
+        auto dataPage = dataFile.load(record.pageId.fileManagerPageId);
+        ASSERT_NE(dataPage, nullptr);
+        auto persistedTuple = dataPage->getTuple(record.slotIndex);
+        ASSERT_NE(persistedTuple, nullptr);
+
+        Tuple expected;
+        expected.addField(std::make_unique<Field>(1));
+        expected.addField(std::make_unique<Field>((float) 123.123));
+        expected.addField(std::make_unique<Field>("Hello World"));
+        expected.addField(std::make_unique<Field>(key));
+        EXPECT_EQ(persistedTuple->serialize(), expected.serialize());
     }
 }
