@@ -183,9 +183,12 @@ bool BTree<K>::insert(K key, std::unique_ptr<Tuple> value) {
         dataPage = bufferManager->pinPage(dataPageId, SHARED);
         slotIndx = dataPage->addTuple(value->clone(), nullptr);
     }
-    targetNode->records[targetNode->count] = Record{.pageId = dataPageId, .slotIndex = slotIndx};
-    targetNode->keys[targetNode->count] = key;
-    targetNode->incrementCount();
+    if (slotIndx == INVALID_VALUE) {
+        return false;
+    }
+    if (!targetNode->add(key, Record{.pageId = dataPageId, .slotIndex = slotIndx})) {
+        return false;
+    }
     auto currentIndexPage = bufferManager->pinPage(targetNode->id, SHARED);
     memcpy(currentIndexPage->pageData.get(), NodeSerializer<K>::serialize(*targetNode).data(), PAGE_SIZE);
     bufferManager->flushPage(targetNode->id);
@@ -383,6 +386,7 @@ void BTree<K>::splitLeafNode(LeafNode<K> *childNode, InnerNode<K> *parentNode) {
 
     LeafNode<K> newNode;
     newNode.id = newNodeId;
+    newNode.next = childNode->next;
     childNode->next = newNodeId;
 
     int index = 0;

@@ -3,7 +3,10 @@
 //
 
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <memory>
+#include <numeric>
+#include <random>
 #include <set>
 
 #include "../test_utils.h"
@@ -486,4 +489,102 @@ TEST(BTreeTest, InsertSplitsInnerWithParent) {
     EXPECT_EQ(nextKey, lastKey + 1);
     EXPECT_EQ(nextLeafId, INVALID_PAGE_ID);
     EXPECT_EQ(visitedLeaves.size(), innerCapacity + innerMidpoint + 2);
+}
+
+TEST(BTreeTest, InsertRandomOrder) {
+    auto dataFilePath = generateRandomFilePath();
+    auto indexFilePath = generateRandomFilePath();
+    BTree<int> tree(indexFilePath, "index", dataFilePath, "data");
+    const int leafCapacity = LeafNode<int>::getKCapacity();
+    const int innerCapacity = InnerNode<int>::getKCapacity();
+    // More tuples than two full inner nodes can address: this forces both an
+    // inner-root split and at least one inner split under an existing parent.
+    const int tupleCount = 2 * leafCapacity * (innerCapacity + 1) + 1;
+    std::vector<int> keys(tupleCount);
+    std::iota(keys.begin(), keys.end(), 0);
+    // Keep failures reproducible while exercising insertions between existing keys.
+    constexpr uint32_t seed = 6422;
+    std::mt19937 random(seed);
+    std::shuffle(keys.begin(), keys.end(), random);
+    SCOPED_TRACE(seed);
+    for (int key : keys) {
+        SCOPED_TRACE(key);
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>("Hello World"));
+        bool inserted = false;
+        ASSERT_NO_THROW(inserted = tree.insert(key, std::move(tuple)));
+        ASSERT_TRUE(inserted);
+    }
+
+    // Use fresh file readers so every lookup checks persisted index and data
+    // pages. Follow the actual separators, rather than predicting split positions.
+    FileManager file(indexFilePath);
+    FileManager dataFile(dataFilePath);
+    auto rootPage = file.load(tree.getRootId().fileManagerPageId);
+    ASSERT_FALSE(NodeSerializer<int>::isLeaf({rootPage->pageData.get(), PAGE_SIZE}));
+    auto root = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+    ASSERT_EQ(root.getLevel(), 2);
+    ASSERT_GE(root.getCount(), 2);
+    std::set<size_t> reachedLeaves;
+    PageID firstLeafId = INVALID_PAGE_ID;
+    for (int key = 0; key < tupleCount; ++key) {
+        SCOPED_TRACE(key);
+        auto nodeId = tree.getRootId();
+        auto parentId = INVALID_PAGE_ID;
+        // Each descent must decrease the level, bounding traversal even if a
+        // bad child pointer creates a cycle in the persisted tree.
+        for (int level = root.getLevel(); level > 0; --level) {
+            auto page = file.load(nodeId.fileManagerPageId);
+            ASSERT_FALSE(NodeSerializer<int>::isLeaf({page->pageData.get(), PAGE_SIZE}));
+            auto inner = NodeSerializer<int>::deserializeInner({page->pageData.get(), PAGE_SIZE});
+            ASSERT_EQ(inner.getId(), nodeId);
+            ASSERT_EQ(inner.getParentId(), parentId);
+            ASSERT_EQ(inner.getLevel(), level);
+            ASSERT_GT(inner.getCount(), 0);
+            ASSERT_LE(inner.getCount(), innerCapacity);
+            ASSERT_TRUE(std::is_sorted(inner.keys.begin(), inner.keys.begin() + inner.getCount()));
+            parentId = nodeId;
+            nodeId = inner.children[inner.getKeyIndex(key)];
+            ASSERT_NE(nodeId, INVALID_PAGE_ID);
+            ASSERT_EQ(nodeId.fileManagerId, "index");
+        }
+        auto page = file.load(nodeId.fileManagerPageId);
+        ASSERT_TRUE(NodeSerializer<int>::isLeaf({page->pageData.get(), PAGE_SIZE}));
+        auto leaf = NodeSerializer<int>::deserializeLeaf({page->pageData.get(), PAGE_SIZE});
+        ASSERT_EQ(leaf.getId(), nodeId);
+        ASSERT_EQ(leaf.getParentId(), parentId);
+        ASSERT_GT(leaf.getCount(), 0);
+        ASSERT_LE(leaf.getCount(), leafCapacity);
+        if (key == 0) firstLeafId = nodeId;
+        reachedLeaves.insert(nodeId.fileManagerPageId);
+        const auto record = leaf.getRecord(key);
+        ASSERT_NE(record, INVALID_RECORD);
+        ASSERT_EQ(record.pageId.fileManagerId, "data");
+        auto dataPage = dataFile.load(record.pageId.fileManagerPageId);
+        auto tuple = dataPage->getTuple(record.slotIndex);
+        ASSERT_NE(tuple, nullptr);
+        Tuple expected;
+        expected.addField(std::make_unique<Field>(key));
+        expected.addField(std::make_unique<Field>("Hello World"));
+        ASSERT_EQ(tuple->serialize(), expected.serialize());
+    }
+
+    // Splitting a leaf in the middle must preserve its previous next link.
+    // The linked leaves must cover exactly the same pages as the routed lookups.
+    std::set<size_t> linkedLeaves;
+    auto leafId = firstLeafId;
+    int recordCount = 0;
+    while (leafId != INVALID_PAGE_ID) {
+        ASSERT_EQ(leafId.fileManagerId, "index");
+        ASSERT_TRUE(linkedLeaves.insert(leafId.fileManagerPageId).second);
+        ASSERT_TRUE(reachedLeaves.contains(leafId.fileManagerPageId));
+        auto page = file.load(leafId.fileManagerPageId);
+        ASSERT_TRUE(NodeSerializer<int>::isLeaf({page->pageData.get(), PAGE_SIZE}));
+        auto leaf = NodeSerializer<int>::deserializeLeaf({page->pageData.get(), PAGE_SIZE});
+        recordCount += leaf.getCount();
+        leafId = leaf.getNext();
+    }
+    EXPECT_EQ(linkedLeaves, reachedLeaves);
+    EXPECT_EQ(recordCount, tupleCount);
 }
