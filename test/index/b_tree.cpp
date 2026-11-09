@@ -96,6 +96,39 @@ TEST(BTreeTest, Insert) {
     EXPECT_STREQ(field3->value.get(), "Hello World");
 }
 
+TEST(BTreeTest, GetAfterRootSplit) {
+    BTree<int> tree(generateRandomFilePath(), "index", generateRandomFilePath(), "data");
+    const int capacity = LeafNode<int>::getKCapacity();
+
+    // Fill the root leaf, then verify the public lookup API before it splits.
+    for (int key = 0; key < capacity; ++key) {
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(key));
+        ASSERT_TRUE(tree.insert(key, std::move(tuple)));
+    }
+    ASSERT_NE(tree.get(1), nullptr);
+    EXPECT_EQ(tree.get(-1), nullptr);
+
+    // One more insertion promotes the root to an inner node.
+    auto tuple = std::make_unique<Tuple>();
+    tuple->addField(std::make_unique<Field>(capacity));
+    ASSERT_TRUE(tree.insert(capacity, std::move(tuple)));
+
+    // Look up every key through get(), covering both leaves and the separator.
+    for (int key = 0; key <= capacity; ++key) {
+        SCOPED_TRACE(key);
+        std::unique_ptr<Tuple> result;
+        ASSERT_NO_THROW(result = tree.get(key));
+        ASSERT_NE(result, nullptr);
+        Tuple expected;
+        expected.addField(std::make_unique<Field>(key));
+        EXPECT_EQ(result->serialize(), expected.serialize());
+    }
+    // Missing keys on either side must return nullptr after traversal.
+    EXPECT_EQ(tree.get(-1), nullptr);
+    EXPECT_EQ(tree.get(capacity + 1), nullptr);
+}
+
 TEST(BTreeTest, InsertSplitsLeafRoot) {
     auto dataFilePath = generateRandomFilePath();
     auto indexFilePath = generateRandomFilePath();

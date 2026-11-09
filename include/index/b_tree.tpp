@@ -204,21 +204,44 @@ bool BTree<K>::remove(K key) {
 
 template<typename K>
 std::unique_ptr<Tuple> BTree<K>::get(K key) {
-    auto &pageData = bufferManager->pinPage(rootId, SHARED)->pageData;
-    std::span<const char> bytes(pageData.get(), PAGE_SIZE);
-    auto leafNode = NodeSerializer<K>::deserializeLeaf(bytes);
+    auto currentNodeId = rootId;
+    std::shared_ptr<Node> currentNode;
 
-    for (size_t i = 0; i < LeafNode<K>::kCapacity; i++) {
-        auto const &k = leafNode.keys[i];
-        if (k == key) {
-            Record record = leafNode.records[i];
-            auto page = bufferManager->pinPage(record.pageId, SHARED);
-            auto tuple = page->getTuple(record.slotIndex);
-            return tuple;
+    while (true) {
+        auto page = bufferManager->pinPage(currentNodeId, SHARED);
+        std::span<const char> bytes(page->pageData.get(), PAGE_SIZE);
+
+        auto isLeaf = NodeSerializer<K>::isLeaf(bytes);
+
+        if (isLeaf) {
+            auto leafNode = NodeSerializer<K>::deserializeLeaf(bytes);
+            currentNode = std::make_unique<LeafNode<K>>(leafNode);
+            break;
         }
+
+        auto innerNode = NodeSerializer<K>::deserializeInner(bytes);
+        currentNode = std::make_unique<InnerNode<K>>(innerNode);
+
+        std::shared_ptr<InnerNode<K>> castedNode = static_pointer_cast<InnerNode<K>>(currentNode);
+        int keyIndex = castedNode->getKeyIndex(key);
+
+        PageID childId = castedNode->children[keyIndex];
+
+        currentNodeId = childId;
     }
 
-    return nullptr;
+    // current node is leaf
+    std::shared_ptr<LeafNode<K>> leafNode = static_pointer_cast<LeafNode<K>>(currentNode);
+
+    auto record = leafNode->getRecord(key);
+
+    if (record == INVALID_RECORD) {
+        return nullptr;
+    }
+
+    auto page = bufferManager->pinPage(record.pageId, SHARED);
+    auto tuple = page->getTuple(record.slotIndex);
+    return tuple;
 }
 
 template<typename K>
