@@ -524,6 +524,71 @@ TEST(BTreeTest, InsertSplitsInnerWithParent) {
     EXPECT_EQ(visitedLeaves.size(), innerCapacity + innerMidpoint + 2);
 }
 
+TEST(BTreeTest, BTreePersistence) {
+    auto dataFilePath = generateRandomFilePath();
+    auto indexFilePath = generateRandomFilePath();
+    const int tupleCount = 2 * LeafNode<int>::getKCapacity() *
+                          (InnerNode<int>::getKCapacity() + 1) + 1;
+    std::vector<int> keys(tupleCount);
+    std::iota(keys.begin(), keys.end(), 0);
+    std::mt19937 random(6422);
+    std::shuffle(keys.begin(), keys.end(), random);
+
+    PageID originalRootId;
+    std::vector<std::string> originalPages;
+    {
+        // Match InsertRandomOrder's workload, including non-root inner splits.
+        BTree<int> original(indexFilePath, "index", dataFilePath, "data");
+        for (int key : keys) {
+            SCOPED_TRACE(key);
+            auto tuple = std::make_unique<Tuple>();
+            tuple->addField(std::make_unique<Field>(key));
+            tuple->addField(std::make_unique<Field>("Hello World"));
+            ASSERT_TRUE(original.insert(key, std::move(tuple)));
+        }
+        originalRootId = original.getRootId();
+        FileManager file(indexFilePath);
+        auto rootPage = file.load(originalRootId.fileManagerPageId);
+        auto root = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+        // The inner-root split creates a level-2 root with one separator.
+        // A second separator at the same height proves a non-root inner child split.
+        ASSERT_EQ(root.getLevel(), 2);
+        ASSERT_GE(root.getCount(), 2);
+
+        // Save every index page before destroying the original tree. These bytes
+        // include node IDs, levels, keys, child/parent links, leaf links and records.
+        for (size_t id = 0; id < file.getNumPages(); ++id) {
+            auto page = file.load(id);
+            originalPages.emplace_back(page->pageData.get(), PAGE_SIZE);
+        }
+    }
+
+    // A fresh tree and buffer manager must recover the same root from disk.
+    BTree<int> reopened(indexFilePath, "index", dataFilePath, "data");
+    ASSERT_EQ(reopened.getRootId(), originalRootId);
+    FileManager file(indexFilePath);
+    ASSERT_EQ(file.getNumPages(), originalPages.size());
+    for (size_t id = 0; id < originalPages.size(); ++id) {
+        SCOPED_TRACE(id);
+        auto page = file.load(id);
+        // Exact page equality checks the entire stored structure, not just counts.
+        EXPECT_EQ(std::string(page->pageData.get(), PAGE_SIZE), originalPages[id]);
+    }
+
+    // Confirm the recovered root and links actually reach every original tuple.
+    for (int key : keys) {
+        SCOPED_TRACE(key);
+        auto tuple = reopened.get(key);
+        ASSERT_NE(tuple, nullptr);
+        Tuple expected;
+        expected.addField(std::make_unique<Field>(key));
+        expected.addField(std::make_unique<Field>("Hello World"));
+        ASSERT_EQ(tuple->serialize(), expected.serialize());
+    }
+    EXPECT_EQ(reopened.get(-1), nullptr);
+    EXPECT_EQ(reopened.get(tupleCount), nullptr);
+}
+
 TEST(BTreeTest, InsertRandomOrder) {
     auto dataFilePath = generateRandomFilePath();
     auto indexFilePath = generateRandomFilePath();
@@ -557,6 +622,8 @@ TEST(BTreeTest, InsertRandomOrder) {
     auto rootPage = file.load(tree.getRootId().fileManagerPageId);
     ASSERT_FALSE(NodeSerializer<int>::isLeaf({rootPage->pageData.get(), PAGE_SIZE}));
     auto root = NodeSerializer<int>::deserializeInner({rootPage->pageData.get(), PAGE_SIZE});
+    // The inner-root split creates a level-2 root with one separator.
+    // A second separator at the same height proves a non-root inner child split.
     ASSERT_EQ(root.getLevel(), 2);
     ASSERT_GE(root.getCount(), 2);
     std::set<size_t> reachedLeaves;
