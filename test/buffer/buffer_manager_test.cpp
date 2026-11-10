@@ -767,7 +767,7 @@ TEST_F(BufferManagerTest, ExtendAllocatesInitializedPages) {
     EXPECT_EQ(manager.getNumPages("fm"), 4);
 }
 
-TEST_F(BufferManagerTest, GetActivePageIdReturnsLastPageWithoutAllocating) {
+TEST_F(BufferManagerTest, GetActivePageIdReturnsLastPageAndAllocating) {
     BufferManager manager;
     const auto filePath = generateRandomFilePath();
     filePaths.push_back(filePath);

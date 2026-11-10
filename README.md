@@ -24,10 +24,10 @@ The diagram shows the broader architecture direction; the roadmap below distingu
 ✅ File manager \
 ✅ Storage manager \
 ✅ Buffer manager \
-⏳ B-tree indexing
+✅ B-tree indexing
 
 ### Query layer
-⏳ Query parser \
+🚧 Query parser \
 ⏳ Query planner and execution engine
 
 ### Reliability
@@ -50,3 +50,7 @@ The diagram shows the broader architecture direction; the roadmap below distingu
 
 1. **Find a page with space for a tuple.** Add a mechanism to the [file manager](docs/design/storage/file-manager.md) to locate an existing page where a tuple will fit, rather than always allocating a new page.
 2. **Bypass the kernel's page cache.** Investigate direct I/O for the [buffer manager](docs/design/buffer/buffer-manager.md) to avoid caching pages in both the buffer pool and the kernel's page cache. Measure the performance impact and account for platform support and I/O alignment requirements.
+3. **Revisit the page pinning logic in [b_tree.tpp](include/index/b_tree.tpp) so exclusive access is honored**
+4. **Add deletion logic in [b_tree.tpp](include/index/b_tree.tpp)**
+5. **Add range query logic [b_tree.tpp](include/index/b_tree.tpp)**
+6. **Add update query logic [b_tree.tpp](include/index/b_tree.tpp)**

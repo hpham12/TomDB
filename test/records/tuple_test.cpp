@@ -164,3 +164,52 @@ TEST(TupleTest, ReturnedFieldIsAnIndependentCopy) {
 
     EXPECT_STREQ(tuple.getField(0)->value.get(), "original");
 }
+
+TEST(TupleTest, CloneEmptyTuple) {
+    Tuple original;
+    const Tuple& source = original;
+    auto copy = source.clone();
+
+    ASSERT_NE(copy, nullptr);
+    EXPECT_NE(copy.get(), &original);
+    EXPECT_EQ(copy->getSize(), sizeof(uint32_t));
+    EXPECT_EQ(copy->serialize(), original.serialize());
+    EXPECT_THROW(copy->getField(0), std::out_of_range);
+}
+
+TEST(TupleTest, ClonePreservesFieldsAndOwnsIndependentCopy) {
+    auto original = std::make_unique<Tuple>();
+    original->addField(std::make_unique<Field>(-42));
+    original->addField(std::make_unique<Field>(123.125f));
+    original->addField(std::make_unique<Field>("Hello World"));
+    const auto expected = original->serialize();
+    const auto expectedSize = original->getSize();
+
+    // Cloning through a const reference must preserve field types, order and values.
+    const Tuple& source = *original;
+    auto copy = source.clone();
+    ASSERT_NE(copy, nullptr);
+    EXPECT_NE(copy.get(), original.get());
+    EXPECT_EQ(copy->getSize(), expectedSize);
+    EXPECT_EQ(copy->serialize(), expected);
+    EXPECT_EQ(original->serialize(), expected);
+
+    // Adding to either tuple must not change the other's field list.
+    original->addField(std::make_unique<Field>(99));
+    EXPECT_EQ(copy->serialize(), expected);
+    EXPECT_THROW(copy->getField(3), std::out_of_range);
+    const auto extendedOriginal = original->serialize();
+    copy->addField(std::make_unique<Field>("copy only"));
+    EXPECT_EQ(original->serialize(), extendedOriginal);
+    const auto extendedCopy = copy->serialize();
+
+    // Destroying the original must leave every cloned field usable. getField()
+    // itself clones, so comparing its returned pointers would not test ownership.
+    original.reset();
+    EXPECT_EQ(copy->serialize(), extendedCopy);
+    EXPECT_EQ(copy->getField(0)->serialize(), Field(-42).serialize());
+    EXPECT_EQ(copy->getField(1)->serialize(), Field(123.125f).serialize());
+    EXPECT_EQ(copy->getField(2)->serialize(), Field("Hello World").serialize());
+    EXPECT_EQ(copy->getField(3)->serialize(), Field("copy only").serialize());
+    EXPECT_THROW(copy->getField(4), std::out_of_range);
+}

@@ -7,6 +7,48 @@
 
 #include "index/node.h"
 
+TEST(NodeTest, IsFullRequiresConcreteNodeType) {
+    // Only leaf and inner nodes define a capacity.
+    Node node;
+    EXPECT_THROW(node.isFull(), std::logic_error);
+}
+
+TEST(LeafNodeTest, IsFullOnlyAfterReachingCapacity) {
+    LeafNode<int> node;
+    Node& base = node;
+    EXPECT_FALSE(node.isFull());
+    EXPECT_FALSE(base.isFull());
+    const Record record{.pageId={"test", 0}, .slotIndex=0};
+    for (uint16_t i = 0; i < node.getKCapacity(); ++i) {
+        ASSERT_FALSE(node.isFull());
+        ASSERT_TRUE(node.add(i, record));
+        EXPECT_EQ(node.isFull(), i + 1 == node.getKCapacity());
+        EXPECT_EQ(base.isFull(), node.isFull());
+    }
+    EXPECT_FALSE(node.add(node.getKCapacity(), record));
+    EXPECT_TRUE(node.isFull());
+}
+
+TEST(InnerNodeTest, IsFullOnlyAfterReachingCapacity) {
+    InnerNode<int> node;
+    Node& base = node;
+    EXPECT_FALSE(node.isFull());
+    EXPECT_FALSE(base.isFull());
+    for (uint16_t i = 0; i < node.getKCapacity(); ++i) {
+        ASSERT_FALSE(node.isFull());
+        ASSERT_EQ(node.addKey(i), i);
+        EXPECT_FALSE(node.isFull()); // addKey leaves count management to the caller.
+        node.incrementCount();
+        EXPECT_EQ(node.isFull(), i + 1 == node.getKCapacity());
+        EXPECT_EQ(base.isFull(), node.isFull());
+    }
+    EXPECT_EQ(node.addKey(node.getKCapacity()), INVALID_INDEX);
+    EXPECT_TRUE(node.isFull());
+    node.setCount(node.getKCapacity() - 1);
+    EXPECT_FALSE(node.isFull());
+    EXPECT_FALSE(base.isFull());
+}
+
 TEST(LeafNodeTest, Initialization) {
     LeafNode<int> leafNode;
 

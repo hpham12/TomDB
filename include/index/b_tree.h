@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include "buffer/buffer_manager.h"
+#include "index/node.h"
 #include "records/tuple.h"
 
 template <class K>
@@ -31,6 +32,16 @@ public:
   [[nodiscard]] PageID getRootId() const {
     return rootId;
   }
+
+  void splitInnerNode(InnerNode<K> *childNode, InnerNode<K> *parentNode);
+
+  // This method should only be used for root node
+  void splitInnerNode(InnerNode<K> *childNode);
+
+  void splitLeafNode(LeafNode<K> *childNode,InnerNode<K> *parentNode);
+
+  // This method should only be used for root node
+  void splitLeafNode(LeafNode<K> *childNode);
 };
 
 #include "b_tree.tpp"

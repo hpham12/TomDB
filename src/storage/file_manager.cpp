@@ -41,6 +41,17 @@ FileManager::FileManager(const std::filesystem::path &filePath) {
     numPages = fileSize / PAGE_SIZE;
 }
 
+void FileManager::refresh() {
+    filestream.seekg(0, std::ios::end);
+    std::streampos fileSize = filestream.tellg();
+
+    if (filestream.fail() || fileSize == std::streampos(-1)) {
+        exit(1);
+    }
+
+    numPages = fileSize / PAGE_SIZE;
+}
+
 std::unique_ptr<Page> FileManager::load(size_t pageId) {
     std::lock_guard lock(mutex);
     if (pageId >= numPages) {
@@ -129,7 +140,6 @@ size_t FileManager::getActivePageId() {
     }
     return numPages - 1;
 }
-
 
 size_t FileManager::getNumPages() {
     std::lock_guard lock(mutex);

@@ -36,6 +36,43 @@ TEST_F(FileManagerTest, InitializationWhenDataFileNotExists) {
     EXPECT_EQ(std::filesystem::file_size(filePath), 0);
 }
 
+TEST_F(FileManagerTest, RefreshSeesPagesAppendedByAnotherManager) {
+    FileManager reader(filePath);
+    FileManager writer(filePath);
+
+    // Refreshing an empty file must not allocate any pages.
+    reader.refresh();
+    EXPECT_EQ(reader.getNumPages(), 0);
+    EXPECT_THROW(reader.getActivePageId(), std::out_of_range);
+
+    for (size_t pageId = 0; pageId < 3; ++pageId) {
+        SCOPED_TRACE(pageId);
+        Page page;
+        auto tuple = std::make_unique<Tuple>();
+        tuple->addField(std::make_unique<Field>(static_cast<int>(pageId)));
+        ASSERT_EQ(page.addTuple(std::move(tuple), nullptr), 0);
+        writer.extend();
+        ASSERT_TRUE(writer.flush(pageId, page));
+
+        // The reader caches the page count until explicitly refreshed.
+        EXPECT_EQ(reader.getNumPages(), pageId);
+        EXPECT_THROW(reader.load(pageId), std::out_of_range);
+        reader.refresh();
+        EXPECT_EQ(reader.getNumPages(), pageId + 1);
+        EXPECT_EQ(reader.getActivePageId(), pageId);
+        auto loaded = reader.load(pageId);
+        ASSERT_NE(loaded, nullptr);
+        EXPECT_EQ(std::string(loaded->pageData.get(), PAGE_SIZE),
+                  std::string(page.pageData.get(), PAGE_SIZE));
+
+        // Repeated refreshes neither grow the file nor change the bounds.
+        reader.refresh();
+        EXPECT_EQ(reader.getNumPages(), pageId + 1);
+        EXPECT_EQ(std::filesystem::file_size(filePath), (pageId + 1) * PAGE_SIZE);
+        EXPECT_THROW(reader.load(pageId + 1), std::out_of_range);
+    }
+}
+
 TEST_F(FileManagerTest, InitializationWhenFileExistsWithNoData) {
     FileManager fileManager(filePath);
 

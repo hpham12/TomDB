@@ -5,18 +5,23 @@
 #ifndef TOMDB_NODE_H
 #define TOMDB_NODE_H
 #include <array>
-#include <iostream>
+#include <stdexcept>
 
 #include "gtest/gtest_prod.h"
 #include "commons.h"
 #include "node_format.h"
 
-template<class K> class NodeSerializer;
-template<class K> class BTree;
+template<class K>
+class NodeSerializer;
+template<class K>
+class BTree;
 
 class Node {
-    template<class K> friend class NodeSerializer;
-    template<class K> friend class BTree;
+    template<class K>
+    friend class NodeSerializer;
+    template<class K>
+    friend class BTree;
+
 protected:
     PageID id = INVALID_PAGE_ID;
     PageID parentId = INVALID_PAGE_ID;
@@ -24,6 +29,8 @@ protected:
     uint16_t count;
 
 public:
+    Node(Node &node) = default;
+
     [[nodiscard]] PageID getParentId() const { return this->parentId; }
     [[nodiscard]] PageID getId() const { return id; }
 
@@ -44,6 +51,10 @@ public:
     [[nodiscard]] uint16_t getLevel() const { return level; }
     [[nodiscard]] uint16_t getCount() const { return count; }
 
+    virtual bool isFull() {
+        throw std::logic_error("Fullness requires a leaf or inner node");
+    }
+
     virtual ~Node() = default;
 };
 
@@ -59,7 +70,10 @@ class LeafNode : public Node {
     FRIEND_TEST(LeafNodeTest, GetKeyIndex);
 
 public:
-    LeafNode() : Node(0, 0) {}
+    LeafNode() : Node(0, 0) {
+    }
+
+    LeafNode(LeafNode &node) = default;
 
     /**
      * Get the record, given the <code>key</code>
@@ -85,6 +99,10 @@ public:
     }
 
     PageID getNext() const { return next; }
+
+    bool isFull() override {
+        return count == kCapacity;
+    }
 };
 
 template<class K>
@@ -96,10 +114,15 @@ class InnerNode : public Node {
     std::array<PageID, kCapacity + 1> children{};
 
     FRIEND_TEST(InnerNodeTest, GetKeyIndex);
-
+    FRIEND_TEST(BTreeTest, InsertSplitsInnerRoot);
+    FRIEND_TEST(BTreeTest, InsertSplitsInnerWithParent);
+    FRIEND_TEST(BTreeTest, InsertRandomOrder);
 
 public:
-    InnerNode() : Node(1, 0) {}
+    InnerNode() : Node(1, 0) {
+    }
+
+    InnerNode(InnerNode &node) = default;
 
     void setCount(uint16_t value) { count = value; }
 
@@ -126,6 +149,10 @@ public:
 
     static uint16_t getKCapacity() {
         return kCapacity;
+    }
+
+    bool isFull() override {
+        return count == kCapacity;
     }
 };
 
