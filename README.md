@@ -3,7 +3,7 @@
 
 # TomDB
 
-TomDB is a learning project for database implementation and distributed systems, with the goal of building a distributed relational database. The current implementation includes records, slotted pages, file storage, and a buffer manager. It should not be used in production.
+TomDB is NoSQL Database designed for performance and flexibility at scale.
 
 ## Documentation
 
