@@ -92,6 +92,11 @@ add_executable(tomdb
         src/buffer/buffer_manager.cpp
         src/buffer/buffer_frame.cpp
         src/buffer/page_guard.cpp
+        include/query/query_processor.h
+        include/query/operators.h
+        src/query/query_processor.cpp
+        src/query/operators.cpp
+        include/Metadata.h
 )
 
 target_link_libraries(tomdb
@@ -126,6 +131,7 @@ add_executable(tomdb_tests
         test/index/b_tree.cpp
         test/index/node.cpp
         test/index/node_serializer_test.cpp
+        include/query/query_processor.h
 )
 
 target_link_libraries(tomdb_tests
