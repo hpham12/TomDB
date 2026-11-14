@@ -11,10 +11,11 @@
 
 inline constexpr std::string_view DEFAULT_METADATA_FILE_PATH = "/.tomdb/metadata";
 
-inline constexpr size_t METADATA_SIZE = 4096;
+inline constexpr size_t METADATA_SIZE = 8192;
 
 class Metadata {
     std::unordered_set<std::string> documents;
+    size_t currentSize = 0;
 
 public:
     /**

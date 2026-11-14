@@ -37,7 +37,7 @@ Metadata::Metadata(std::string_view path) {
         return;
     }
 
-    if (fileSize >= METADATA_SIZE) {
+    if (fileSize > METADATA_SIZE) {
         std::cerr << "Metadata file is corrupted!" << '\n';
         exit(1);
     }
@@ -45,19 +45,24 @@ Metadata::Metadata(std::string_view path) {
     std::array<char, METADATA_SIZE> buffer;
 
     filestream.seekg(0, std::ios::beg);
-    filestream.read(buffer.data(), METADATA_SIZE);
+    filestream.read(buffer.data(), fileSize);
     deserialize(buffer);
 }
 
 std::array<char, METADATA_SIZE> Metadata::serialize() const {
     size_t offset = 0;
+    size_t currentSize = 0;
     uint16_t totalDocuments = documents.size();
     std::array<char, METADATA_SIZE> buffer;
     memcpy(buffer.data(), &totalDocuments, sizeof(uint16_t));
+    currentSize += sizeof(uint16_t);
     offset += sizeof(uint16_t);
 
     for (const auto &document : documents) {
         uint8_t documentNameLength = document.size();
+        if (currentSize + documentNameLength + sizeof(documentNameLength) > METADATA_SIZE) {
+            throw std::out_of_range("Metadata size is too big");
+        }
         memcpy(buffer.data() + offset, &documentNameLength, sizeof(uint8_t));
         offset += sizeof(documentNameLength);
         document.copy(buffer.data() + offset, documentNameLength);
