@@ -4,6 +4,8 @@
 #ifndef TOMDB_NODE_TPP
 #define TOMDB_NODE_TPP
 
+#include <iostream>
+
 #include "node.h"
 
 template<class K>

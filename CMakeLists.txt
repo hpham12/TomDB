@@ -33,6 +33,7 @@ FetchContent_MakeAvailable(googletest)
 # --------------------
 
 add_library(tomdb_lib
+        src/metadata.cpp
         src/records/field.cpp
         src/records/tuple.cpp
         src/records/page.cpp
@@ -96,7 +97,6 @@ add_executable(tomdb
         include/query/operators.h
         src/query/query_processor.cpp
         src/query/operators.cpp
-        include/Metadata.h
 )
 
 target_link_libraries(tomdb
@@ -132,6 +132,7 @@ add_executable(tomdb_tests
         test/index/node.cpp
         test/index/node_serializer_test.cpp
         include/query/query_processor.h
+        test/metadata.cpp
 )
 
 target_link_libraries(tomdb_tests

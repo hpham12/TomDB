@@ -11,6 +11,8 @@ void InsertOperator::open() {
 
 bool InsertOperator::next() {
     // TODO: check hasNext, invoke BTree insert, then set hasNext to false
+
+    return false;
 }
 
 std::unique_ptr<Tuple> InsertOperator::getOutput() {
@@ -26,6 +28,13 @@ void SelectOperator::open() {
 
 bool SelectOperator::next() {
     // TODO: check hasNext, Invoke BTree select, then set hasNext to false
+
+    return false;
+}
+
+std::unique_ptr<Tuple> SelectOperator::getOutput() {
+
+    return nullptr;
 }
 
 void SelectOperator::close() {
@@ -39,12 +48,14 @@ void CreateDocumentOperator::open() {
 
 bool CreateDocumentOperator::next() {
     /**
-     * TODO: Check whether document exists in metadata. If exists, throw error. If not, create index and data file
+     * TODO: Check documentCreated, whether document exists in metadata. If exists, throw error. If not, create index and data file
      * Index file format: {document}_tomdb.idx
      * Data file format: {document}_tomdb.dat
      *
      * Then, update and flush metadata
      */
+
+    return false;
 }
 
 void CreateDocumentOperator::close() {
@@ -67,6 +78,7 @@ bool DropDocumentOperator::next() {
      *
      * Then, set documentDropped -> true;
      */
+    return false;
 }
 
 void DropDocumentOperator::close() {
