@@ -49,7 +49,7 @@ wire encoding; object padding and virtual-table pointers are never stored.
 | Self page ID | Encoded page ID |
 | Parent page ID | Encoded page ID |
 
-A page ID is a `uint8` name length (maximum 8 bytes), exactly that many name bytes (no trailing
+A page ID is a `uint8` name length (maximum 255 bytes), exactly that many name bytes (no trailing
 terminator), and a `uint64` file-local page number. `UINT64_MAX` denotes the
 maximum-`size_t` page-number sentinel. Other values must fit the reader's
 `size_t`. Names are serialized as bytes, including embedded nulls if present.
@@ -61,7 +61,7 @@ by `count + 1` child page IDs, including one child for an empty inner node.
 ## Validation and remaining work
 
 Serialization rejects invalid levels/counts with `std::invalid_argument` and
-oversized payloads or names longer than 8 bytes with `std::length_error`. Deserialization rejects
+oversized payloads or names longer than 255 bytes with `std::length_error`. Deserialization rejects
 wrong magic/version/kind/key encoding, invalid levels/counts, truncated data,
 unsorted keys, oversized input, and integers that cannot fit the runtime type.
 Duplicate keys are permitted. This validates the encoding, not B-tree structural
@@ -70,22 +70,25 @@ relationships or whether referenced files/pages exist. There is no checksum.
 ## Capacity
 
 [node_format.h](../../../include/index/node_format.h) defines the shared wire-size
-constants. A page ID uses at most `1 + 8 + 8 = 17` bytes. Both node types reserve
-`12 + 3 * 17 = 63` bytes: self and parent IDs plus a leaf link or the extra inner
-child. Leaf entries use `sizeof(K) + 17 + 8` bytes; inner entries use
-`sizeof(K) + 17` bytes. Thus:
+constants. A page ID uses at most `1 + 255 + 8 = 264` bytes. Both node types reserve
+`12 + 3 * 264 = 804` bytes: self and parent IDs plus a leaf link or the extra inner
+child. Leaf entries use `sizeof(K) + 264 + 8` bytes; inner entries use
+`sizeof(K) + 264` bytes. Thus:
 
 ```text
-leaf capacity  = (PAGE_SIZE - 63) / (key bytes + 25)
-inner capacity = (PAGE_SIZE - 63) / (key bytes + 17)
+leaf capacity  = (PAGE_SIZE - 804) / (key bytes + 272)
+inner capacity = (PAGE_SIZE - 804) / (key bytes + 264)
 ```
 
-For `int32_t`, these are 139 leaf entries and 192 inner keys (193 children).
+For `int32_t`, these are 11 leaf entries and 12 inner keys (13 children).
 The formulas reserve maximum-length names, so every valid node at capacity fits
 in one serialized page. Shorter names leave spare space rather than increasing
 the capacity. C++ object sizes may exceed `PAGE_SIZE`; only serialized bytes are
 written to disk. Compile-time checks ensure metadata and entries fit and counts
 remain representable as `uint16_t`. Runtime encoding checks remain in place.
+
+Indexes written with the previous 8-byte name limit may contain nodes that exceed
+the current capacities. Those indexes must be rebuilt.
 
 BTree insertion/loading is still stubbed; this utility does not implement those
 operations or migrate older raw layouts.

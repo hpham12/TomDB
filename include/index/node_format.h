@@ -10,7 +10,7 @@
 
 // Version 1 wire sizes, independent of the C++ node and PageID object layouts.
 namespace NodeFormat {
-inline constexpr size_t MAX_FILE_MANAGER_NAME_BYTES = 8;
+inline constexpr size_t MAX_FILE_MANAGER_NAME_BYTES = 255;
 inline constexpr size_t NAME_LENGTH_BYTES = 1;
 inline constexpr size_t PAGE_NUMBER_BYTES = 8;
 inline constexpr size_t SLOT_INDEX_BYTES = 8;

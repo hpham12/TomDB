@@ -49,7 +49,7 @@ TEST_F(FileManagerTest, RefreshSeesPagesAppendedByAnotherManager) {
         SCOPED_TRACE(pageId);
         Page page;
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(static_cast<int>(pageId)));
+        tuple->addField(std::make_unique<Field>(static_cast<int>(pageId), "value"));
         ASSERT_EQ(page.addTuple(std::move(tuple), nullptr), 0);
         writer.extend();
         ASSERT_TRUE(writer.flush(pageId, page));
@@ -194,7 +194,7 @@ TEST_F(FileManagerTest, ExtendTilPageSmallerThanNumPages) {
 TEST_F(FileManagerTest, ReopenPreservesPagesAndExtensionDoesNotOverwriteData) {
     Page newPage;
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(std::string("persisted")));
+    tuple->addField(std::make_unique<Field>(std::string("persisted"), "value"));
     ASSERT_EQ(newPage.addTuple(std::move(tuple), nullptr), 0);
 
     const std::string expected(newPage.pageData.get(), PAGE_SIZE);

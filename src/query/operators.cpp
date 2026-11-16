@@ -4,15 +4,32 @@
 
 #include "query/operators.h"
 
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 // ---- InsertOperator ---- //
 void InsertOperator::open() {
     // TODO: Create BTree instance
+    std::string indexFileName = document + "_tomdb.idx";
+    std::string dataFileName = document + "_tomdb.dat";
+
+    std::string indexFilePath = "/.tomdb/" + indexFileName;
+    std::string dataFilePath = "/.tomdb/" + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
 }
 
 bool InsertOperator::next() {
-    // TODO: check hasNext, invoke BTree insert, then set hasNext to false
-
-    return false;
+    if (inserted) {
+        return false;
+    }
+    index->insert(keyToInsert, std::move(tupleToInsert));
+    std::cout<<"inserted"<<std::endl;
+    inserted = true;
+    return true;
 }
 
 std::unique_ptr<Tuple> InsertOperator::getOutput() {
@@ -23,18 +40,36 @@ void InsertOperator::close() {}
 
 // ---- SelectOperator ---- //
 void SelectOperator::open() {
-    // TODO: Create BTree instance
+    std::string indexFileName = document + "_tomdb.idx";
+    std::string dataFileName = document + "_tomdb.dat";
+
+    std::string indexFilePath = "/.tomdb/" + indexFileName;
+    std::string dataFilePath = "/.tomdb/" + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
 }
 
 bool SelectOperator::next() {
-    // TODO: check hasNext, Invoke BTree select, then set hasNext to false
+    if (!hasNext) {
+        return false;
+    }
 
-    return false;
+    std::string indexFileName = document + "_tomdb.idx";
+    std::string dataFileName = document + "_tomdb.dat";
+
+    std::string indexFilePath = "/.tomdb/" + indexFileName;
+    std::string dataFilePath = "/.tomdb/" + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
+
+    currentOutput = index->get(lookupKey);
+
+    hasNext = false;
+    return true;
 }
 
 std::unique_ptr<Tuple> SelectOperator::getOutput() {
-
-    return nullptr;
+    return currentOutput->clone();
 }
 
 void SelectOperator::close() {
@@ -54,8 +89,24 @@ bool CreateDocumentOperator::next() {
      *
      * Then, update and flush metadata
      */
+    if (metadata->containsDocument(document)) {
+        return false;
+    }
 
-    return false;
+    // Create index and data files
+    std::string indexFileName = document + "_tomdb.idx";
+    std::string dataFileName = document + "_tomdb.dat";
+
+    std::string indexFilePath = "/.tomdb/" + indexFileName;
+    std::string dataFilePath = "/.tomdb/" + dataFileName;
+
+    std::ofstream createdIndexFile(indexFilePath);
+    std::ofstream createdDataFile(dataFilePath);
+
+    metadata->addDocument(document);
+    metadata->flush();
+
+    return true;
 }
 
 void CreateDocumentOperator::close() {
@@ -99,8 +150,42 @@ bool PrintOperator::next() {
 }
 
 std::unique_ptr<Tuple> PrintOperator::getOutput() {
-    // TODO: invoke input.getOutput(), then format for printing only
-    return nullptr;
+    auto output = input->getOutput();
+    if (!output) {
+        return nullptr;
+    }
+
+    std::ostringstream formatted;
+    formatted << '{';
+    for (size_t i = 0; i < output->getFieldCount(); ++i) {
+        auto field = output->getField(i);
+        if (i != 0) {
+            formatted << ", ";
+        }
+        formatted << field->name << ": ";
+        switch (field->type) {
+            case INTEGER: {
+                int value;
+                std::memcpy(&value, field->value.get(), sizeof(value));
+                formatted << value;
+                break;
+            }
+            case FLOAT: {
+                float value;
+                std::memcpy(&value, field->value.get(), sizeof(value));
+                formatted << value;
+                break;
+            }
+            case STRING:
+                formatted << std::quoted(std::string(field->value.get(), field->size));
+                break;
+            default:
+                throw std::logic_error("Unknown field type");
+        }
+    }
+    formatted << "}\n";
+    std::cout << formatted.str();
+    return output;
 }
 
 void PrintOperator::close() {

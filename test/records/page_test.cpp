@@ -15,13 +15,13 @@ TEST(PageTest, AddTuple) {
     auto tuple = std::make_unique<Tuple>();
 
     int i = 123456;
-    tuple->addField(std::make_unique<Field>(i));
+    tuple->addField(std::make_unique<Field>(i, "value"));
 
     float f = 123.456;
-    tuple->addField(std::make_unique<Field>(f));
+    tuple->addField(std::make_unique<Field>(f, "value"));
 
     std::string s = "Hello World";
-    tuple->addField(std::make_unique<Field>(s));
+    tuple->addField(std::make_unique<Field>(s, "value"));
 
     char *reason = nullptr;
     auto tupleSize = tuple->getSize();
@@ -38,20 +38,23 @@ TEST(PageTest, AddTuple) {
     stream.write(page.pageData.get() + offset, tupleSize);
 
     auto deserialized = Tuple::deserialize(stream);
-    EXPECT_EQ(deserialized->getSize(), 41);
+    EXPECT_EQ(deserialized->getSize(), 59);
 
     auto intField = deserialized->getField(0);
     auto floatField = deserialized->getField(1);
     auto stringField = deserialized->getField(2);
 
+    EXPECT_EQ(intField->name, "value");
     EXPECT_EQ(intField->type, FieldType::INTEGER);
     EXPECT_EQ(intField->size, sizeof(int));
     EXPECT_EQ(*reinterpret_cast<int*>(intField->value.get()), i);
 
+    EXPECT_EQ(floatField->name, "value");
     EXPECT_EQ(floatField->type, FieldType::FLOAT);
     EXPECT_EQ(floatField->size, sizeof(int));
     EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(floatField->value.get()), f);
 
+    EXPECT_EQ(stringField->name, "value");
     EXPECT_EQ(stringField->type, FieldType::STRING);
     EXPECT_EQ(stringField->size, s.length());
     EXPECT_STREQ(stringField->value.get(), s.c_str());
@@ -95,16 +98,16 @@ std::unique_ptr<Tuple> createLargeTestTuple() {
     auto tuple = std::make_unique<Tuple>();
 
     int i = 123456;
-    tuple->addField(std::make_unique<Field>(i));
-    tuple->addField(std::make_unique<Field>(i));
+    tuple->addField(std::make_unique<Field>(i, "value"));
+    tuple->addField(std::make_unique<Field>(i, "value"));
 
     float f = 123.456;
-    tuple->addField(std::make_unique<Field>(f));
-    tuple->addField(std::make_unique<Field>(f));
+    tuple->addField(std::make_unique<Field>(f, "value"));
+    tuple->addField(std::make_unique<Field>(f, "value"));
 
     std::string s = "Hello World";
-    tuple->addField(std::make_unique<Field>(s));
-    tuple->addField(std::make_unique<Field>(s));
+    tuple->addField(std::make_unique<Field>(s, "value"));
+    tuple->addField(std::make_unique<Field>(s, "value"));
 
     return tuple;
 }
@@ -117,7 +120,7 @@ std::unique_ptr<Tuple> createSmallTestTuple() {
     auto tuple = std::make_unique<Tuple>();
 
     int i = 123456;
-    tuple->addField(std::make_unique<Field>(i));
+    tuple->addField(std::make_unique<Field>(i, "value"));
 
     return tuple;
 }
@@ -155,9 +158,9 @@ TEST(PageTest, TupleCanExactlyFillRemainingSpace) {
     Page page;
     auto tuple = std::make_unique<Tuple>();
 
-    const size_t overhead = sizeof(uint32_t) + sizeof(FieldType) + sizeof(uint16_t);
+    const size_t overhead = sizeof(uint32_t) + sizeof(FieldType) + sizeof(uint16_t) + sizeof(uint8_t) + 5;
     std::string s(PAGE_SIZE - page.metadata_size - overhead, 'x');
-    tuple->addField(std::make_unique<Field>(s));
+    tuple->addField(std::make_unique<Field>(s, "value"));
 
     ASSERT_EQ(page.addTuple(std::move(tuple), nullptr), 0);
 
@@ -186,13 +189,13 @@ TEST(PageTest, GetTuple) {
     auto tuple = std::make_unique<Tuple>();
 
     int i = 123456;
-    tuple->addField(std::make_unique<Field>(i));
+    tuple->addField(std::make_unique<Field>(i, "value"));
 
     float f = 123.456;
-    tuple->addField(std::make_unique<Field>(f));
+    tuple->addField(std::make_unique<Field>(f, "value"));
 
     std::string s = "Hello World";
-    tuple->addField(std::make_unique<Field>(s));
+    tuple->addField(std::make_unique<Field>(s, "value"));
 
     char *reason = nullptr;
     ASSERT_EQ(page.addTuple(createLargeTestTuple(), reason), 0);
@@ -206,14 +209,17 @@ TEST(PageTest, GetTuple) {
     auto floatField = retrievedTuple->getField(1);
     auto stringField = retrievedTuple->getField(2);
 
+    EXPECT_EQ(intField->name, "value");
     EXPECT_EQ(intField->type, FieldType::INTEGER);
     EXPECT_EQ(intField->size, sizeof(int));
     EXPECT_EQ(*reinterpret_cast<int*>(intField->value.get()), i);
 
+    EXPECT_EQ(floatField->name, "value");
     EXPECT_EQ(floatField->type, FieldType::FLOAT);
     EXPECT_EQ(floatField->size, sizeof(int));
     EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(floatField->value.get()), f);
 
+    EXPECT_EQ(stringField->name, "value");
     EXPECT_EQ(stringField->type, FieldType::STRING);
     EXPECT_EQ(stringField->size, s.length());
     EXPECT_STREQ(stringField->value.get(), s.c_str());
@@ -241,12 +247,13 @@ TEST(PageTest, GetTupleReturnsNullAfterDeletionAndReadsReplacement) {
     EXPECT_EQ(page.getTuple(0), nullptr);
 
     auto replacement = std::make_unique<Tuple>();
-    replacement->addField(std::make_unique<Field>(42));
+    replacement->addField(std::make_unique<Field>(42, "value"));
     ASSERT_EQ(page.addTuple(std::move(replacement), nullptr), 0);
     auto retrieved = page.getTuple(0);
     ASSERT_NE(retrieved, nullptr);
     auto field = retrieved->getField(0);
     ASSERT_NE(field, nullptr);
+    EXPECT_EQ(field->name, "value");
     EXPECT_EQ(*reinterpret_cast<int*>(field->value.get()), 42);
 }
 
@@ -263,7 +270,7 @@ TEST(PageTest, GetTupleReturnsIndependentCopiesWithoutChangingPage) {
     ASSERT_NE(second, nullptr);
     EXPECT_NE(first.get(), second.get());
     EXPECT_EQ(first->serialize(), expected);
-    first->addField(std::make_unique<Field>(42));
+    first->addField(std::make_unique<Field>(42, "value"));
     EXPECT_NE(first->serialize(), expected);
     EXPECT_EQ(second->serialize(), expected);
     EXPECT_EQ(std::string(page.pageData.get(), PAGE_SIZE), before);
@@ -273,12 +280,13 @@ TEST(PageTest, GetTupleReadsLastValidSlot) {
     Page page;
     for (size_t i = 0; i < MAX_SLOTS; ++i) {
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(static_cast<int>(i)));
+        tuple->addField(std::make_unique<Field>(static_cast<int>(i), "value"));
         ASSERT_EQ(page.addTuple(std::move(tuple), nullptr), i);
     }
     auto retrieved = page.getTuple(MAX_SLOTS - 1);
     ASSERT_NE(retrieved, nullptr);
     auto field = retrieved->getField(0);
     ASSERT_NE(field, nullptr);
+    EXPECT_EQ(field->name, "value");
     EXPECT_EQ(*reinterpret_cast<int*>(field->value.get()), static_cast<int>(MAX_SLOTS - 1));
 }

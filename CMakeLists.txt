@@ -28,12 +28,20 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 
+FetchContent_Declare(
+        nlohmann_json
+        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+        URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # --------------------
 # Core database library
 # --------------------
 
 add_library(tomdb_lib
         src/metadata.cpp
+        src/query/insert_json.cpp
         src/records/field.cpp
         src/records/tuple.cpp
         src/records/page.cpp
@@ -56,6 +64,8 @@ target_include_directories(tomdb_lib
 target_link_libraries(tomdb_lib
         PUBLIC
         GTest::gtest
+        PRIVATE
+        nlohmann_json::nlohmann_json
 )
 
 # --------------------
@@ -128,9 +138,11 @@ add_executable(tomdb_tests
         test/buffer/buffer_frame_test.cpp
         test/buffer/frame_lock_table_test.cpp
         test/buffer/page_guard.cpp
-        test/index/b_tree.cpp
-        test/index/node.cpp
+        test/index/b_tree_test.cpp
+        test/index/node_test.cpp
         test/index/node_serializer_test.cpp
+        test/query/insert_json_test.cpp
+        test/query/query_processor_test.cpp
         include/query/query_processor.h
         test/metadata.cpp
 )

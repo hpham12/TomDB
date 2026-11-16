@@ -5,6 +5,7 @@
 #ifndef TOMDB_OPERATORS_H
 #define TOMDB_OPERATORS_H
 #include <utility>
+#include <vector>
 
 #include "metadata.h"
 #include "index/b_tree.h"
@@ -34,7 +35,8 @@ class SelectOperator : public Operator {
     std::unique_ptr<Tuple> currentOutput;
     std::unique_ptr<BTree<Key> > index;
     std::string document;
-    bool hasNext = false;
+    std::vector<std::string> fieldNames;
+    bool hasNext = true;
 
 public:
     void open() override;
@@ -45,7 +47,8 @@ public:
 
     void close() override;
 
-    SelectOperator(Key lookupKey, std::string document) : lookupKey(lookupKey), document(std::move(document)) {
+    SelectOperator(Key lookupKey, std::string document, std::vector<std::string> fieldNames = {})
+        : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)) {
     }
 
     ~SelectOperator() override = default;
@@ -73,7 +76,7 @@ class InsertOperator : public Operator {
     Key keyToInsert;
     std::string document;
     std::unique_ptr<BTree<Key> > index;
-    bool hasNext = false;
+    bool inserted = false;
 
 public:
     void open() override;
@@ -93,8 +96,7 @@ public:
 
 class CreateDocumentOperator : public Operator {
     std::string document;
-    std::unique_ptr<Metadata> metadata;
-    bool documentCreated = false;
+    std::shared_ptr<Metadata> metadata;
 
 public:
     void open() override;
@@ -105,8 +107,7 @@ public:
 
     void close() override;
 
-    CreateDocumentOperator(std::string document) : document(std::move(document)) {
-    };
+    CreateDocumentOperator(std::string document, const std::shared_ptr<Metadata> &metadata) : document(std::move(document)), metadata(metadata) {}
 
     ~CreateDocumentOperator() override = default;
 };
@@ -114,7 +115,7 @@ public:
 class DropDocumentOperator : public Operator {
     std::string document;
     bool documentDropped = false;
-    std::unique_ptr<Metadata> metadata;
+    std::shared_ptr<Metadata> metadata;
 
 public:
     void open() override;
@@ -125,8 +126,8 @@ public:
 
     void close() override;
 
-    DropDocumentOperator(std::string document, std::unique_ptr<Metadata> metadata) : document(std::move(document)),
-        metadata(std::move(metadata)) {
+    DropDocumentOperator(std::string document, const std::shared_ptr<Metadata> &metadata) : document(std::move(document)),
+        metadata(metadata) {
     };
 
     ~DropDocumentOperator() override = default;

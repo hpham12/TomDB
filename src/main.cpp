@@ -2,14 +2,23 @@
 // Created by Hieu Pham on 9/12/26.
 //
 
+#include <exception>
+#include <iostream>
 #include <memory>
-#include <stdexcept>
+#include <string>
 
 #include "metadata.h"
+#include "query/query_processor.h"
 
 int main() {
-    // TODO: Read metadata file, then invoke Metadata#deserialize
-    auto metadata = std::make_unique<Metadata>();
+    auto metadata = std::make_shared<Metadata>();
 
-    // TODO: Create an infinite loop that takes input from user, then invoke QueryProcessor for each query
+    std::string query;
+    while (std::getline(std::cin, query)) {
+        try {
+            QueryProcessor::processQuery(query, metadata, true);
+        } catch (const std::exception &error) {
+            std::cerr << error.what() << '\n';
+        }
+    }
 }

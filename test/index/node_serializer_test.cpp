@@ -123,8 +123,10 @@ TEST(NodeSerializerTest, RejectsMalformedHeadersAndWrongKeyType) {
     std::vector<char> oversized(PAGE_SIZE + 1);
     EXPECT_THROW(Codec::deserializeLeaf(oversized), std::invalid_argument);
     auto bytes = valid;
-    bytes[12] = static_cast<char>(255); // Impossible name length.
-    EXPECT_THROW(Codec::deserializeLeaf(bytes), std::invalid_argument);
+    bytes[12] = static_cast<char>(255);
+    // A 255-byte name is valid, but the available input is truncated.
+    EXPECT_THROW(Codec::deserializeLeaf(std::span<const char>(bytes.data(), 12 + 1 + 254)),
+                 std::invalid_argument);
 }
 
 TEST(NodeSerializerTest, RejectsOversizedPayloadAndInvalidCount) {
@@ -149,21 +151,28 @@ TEST(NodeSerializerTest, SupportsUnsigned64BitAndByteKeys) {
 }
 
 
-TEST(NodeSerializerTest, AcceptsEightByteNamesAndRejectsLongerNames) {
+TEST(NodeSerializerTest, Accepts255ByteNamesAndRejectsLongerNames) {
     LeafNode<int32_t> leaf;
-    const Record record{.pageId={"12345678", 1}, .slotIndex=0};
+    const std::string maxName(255, 'x');
+    const std::string tooLongName(256, 'x');
+    const Record record{.pageId={maxName, 1}, .slotIndex=0};
     ASSERT_TRUE(leaf.add(1, record));
     auto restored = Codec::deserializeLeaf(Codec::serialize(leaf));
     EXPECT_EQ(restored.getRecord(1), record);
     LeafNode<int32_t> tooLong;
-    ASSERT_TRUE(tooLong.add(1, Record{.pageId={"123456789", 1}, .slotIndex=0}));
+    ASSERT_TRUE(tooLong.add(1, Record{.pageId={tooLongName, 1}, .slotIndex=0}));
     EXPECT_THROW(Codec::serialize(tooLong), std::length_error);
     InnerNode<int32_t> inner;
-    ASSERT_TRUE(inner.addChild(PageID{"123456789", 1}, 0));
-    EXPECT_THROW(Codec::serialize(inner), std::length_error);
+    ASSERT_TRUE(inner.addChild(PageID{maxName, 1}, 0));
+    auto restoredInner = Codec::deserializeInner(Codec::serialize(inner));
+    EXPECT_EQ(Codec::serialize(restoredInner), Codec::serialize(inner));
+    InnerNode<int32_t> tooLongInner;
+    ASSERT_TRUE(tooLongInner.addChild(PageID{tooLongName, 1}, 0));
+    EXPECT_THROW(Codec::serialize(tooLongInner), std::length_error);
     auto malformed = Codec::serialize(LeafNode<int32_t>{});
-    malformed[12] = 9;
-    EXPECT_THROW(Codec::deserializeLeaf(malformed), std::invalid_argument);
+    malformed[12] = static_cast<char>(255);
+    EXPECT_THROW(Codec::deserializeLeaf(std::span<const char>(malformed.data(), 13 + 254)),
+                 std::invalid_argument);
 }
 
 TEST(NodeSerializerTest, RejectsTruncatedAndInvalidInnerNodes) {
@@ -205,10 +214,9 @@ Codec::PageBytes emptyNodeWithMaximumLengthNames(bool leaf) {
     std::copy(prefix.begin(), prefix.end(), bytes.begin());
     size_t offset = prefix.size();
     for (uint8_t number = 1; number <= 3; ++number) {
-        bytes[offset++] = 8;
-        for (char c : std::string_view("12345678")) {
-            bytes[offset++] = c;
-        }
+        bytes[offset++] = static_cast<char>(255);
+        std::fill_n(bytes.begin() + offset, 255, 'x');
+        offset += 255;
         bytes[offset] = static_cast<char>(number);
         offset += 8;
     }
@@ -217,32 +225,35 @@ Codec::PageBytes emptyNodeWithMaximumLengthNames(bool leaf) {
 }
 
 TEST(NodeSerializerTest, FullLeafWithMaximumLengthNamesFitsSerializedBudget) {
-    // Independent wire-size arithmetic: 63 bytes metadata, 29 bytes per int32 entry.
-    constexpr size_t capacity = (PAGE_SIZE - 63) / 29;
+    // Independent wire-size arithmetic: 804 bytes metadata, 276 bytes per int32 entry.
+    constexpr size_t capacity = (PAGE_SIZE - 804) / 276;
     ASSERT_EQ(LeafNode<int32_t>::getKCapacity(), capacity);
-    EXPECT_LE(63 + capacity * 29, PAGE_SIZE);
-    EXPECT_GT(63 + (capacity + 1) * 29, PAGE_SIZE);
+    EXPECT_LE(804 + capacity * 276, PAGE_SIZE);
+    EXPECT_GT(804 + (capacity + 1) * 276, PAGE_SIZE);
     auto node = Codec::deserializeLeaf(emptyNodeWithMaximumLengthNames(true));
     for (size_t i = 0; i < capacity; ++i) {
-        ASSERT_TRUE(node.add(static_cast<int32_t>(i), Record{.pageId={"12345678", i}, .slotIndex=i}));
+        ASSERT_TRUE(node.add(static_cast<int32_t>(i), Record{.pageId={std::string(255, 'x'), i}, .slotIndex=i}));
     }
     const auto bytes = Codec::serialize(node);
     auto restored = Codec::deserializeLeaf(bytes);
+    EXPECT_EQ(restored.getId(), (PageID{std::string(255, 'x'), 1}));
+    EXPECT_EQ(restored.getParentId(), (PageID{std::string(255, 'x'), 2}));
+    EXPECT_EQ(restored.getNext(), (PageID{std::string(255, 'x'), 3}));
     EXPECT_EQ(restored.getCount(), capacity);
     EXPECT_EQ(Codec::serialize(restored), bytes);
     EXPECT_FALSE(node.add(999, Record{}));
 }
 
 TEST(NodeSerializerTest, FullInnerWithExtraChildAndMaximumLengthNamesFitsSerializedBudget) {
-    // Metadata includes the extra child: 63 bytes fixed, 21 bytes per int32 entry.
-    constexpr size_t capacity = (PAGE_SIZE - 63) / 21;
+    // Metadata includes the extra child: 804 bytes fixed, 268 bytes per int32 entry.
+    constexpr size_t capacity = (PAGE_SIZE - 804) / 268;
     ASSERT_EQ(InnerNode<int32_t>::getKCapacity(), capacity);
-    EXPECT_LE(63 + capacity * 21, PAGE_SIZE);
-    EXPECT_GT(63 + (capacity + 1) * 21, PAGE_SIZE);
+    EXPECT_LE(804 + capacity * 268, PAGE_SIZE);
+    EXPECT_GT(804 + (capacity + 1) * 268, PAGE_SIZE);
     auto node = Codec::deserializeInner(emptyNodeWithMaximumLengthNames(false));
     for (uint16_t i = 0; i < capacity; ++i) {
         ASSERT_EQ(node.addKey(i), i);
-        ASSERT_TRUE(node.addChild(PageID{"12345678", i}, i + 1));
+        ASSERT_TRUE(node.addChild(PageID{std::string(255, 'x'), i}, i + 1));
         node.setCount(i + 1);
     }
     const auto bytes = Codec::serialize(node);
@@ -253,8 +264,8 @@ TEST(NodeSerializerTest, FullInnerWithExtraChildAndMaximumLengthNamesFitsSeriali
 }
 
 TEST(NodeSerializerTest, CapacityUsesEncodedKeyWidth) {
-    EXPECT_EQ(LeafNode<int8_t>::getKCapacity(), (PAGE_SIZE - 63) / 26);
-    EXPECT_EQ(InnerNode<int8_t>::getKCapacity(), (PAGE_SIZE - 63) / 18);
-    EXPECT_EQ(LeafNode<uint64_t>::getKCapacity(), (PAGE_SIZE - 63) / 33);
-    EXPECT_EQ(InnerNode<uint64_t>::getKCapacity(), (PAGE_SIZE - 63) / 25);
+    EXPECT_EQ(LeafNode<int8_t>::getKCapacity(), (PAGE_SIZE - 804) / 273);
+    EXPECT_EQ(InnerNode<int8_t>::getKCapacity(), (PAGE_SIZE - 804) / 265);
+    EXPECT_EQ(LeafNode<uint64_t>::getKCapacity(), (PAGE_SIZE - 804) / 280);
+    EXPECT_EQ(InnerNode<uint64_t>::getKCapacity(), (PAGE_SIZE - 804) / 272);
 }

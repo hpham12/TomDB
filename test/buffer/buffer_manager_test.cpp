@@ -574,7 +574,7 @@ TEST_F(BufferManagerTest, RepinningDirtyCachedPagePreservesChanges) {
     {
         auto page = bm.pinPage(pageId, EXCLUSIVE);
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(std::string("unflushed")));
+        tuple->addField(std::make_unique<Field>(std::string("unflushed"), "value"));
         ASSERT_EQ(page->addTuple(std::move(tuple), nullptr), 0);
         page.markDirty();
         expected.assign(page->pageData.get(), PAGE_SIZE);
@@ -601,7 +601,7 @@ TEST_F(BufferManagerTest, AutomaticEvictionPersistsDirtyVictimAndReusesFrame) {
         auto page = bm.pinPage(firstPageId, EXCLUSIVE);
         originalFrameId = page.getFrameId();
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(123));
+        tuple->addField(std::make_unique<Field>(123, "value"));
         ASSERT_EQ(page->addTuple(std::move(tuple), nullptr), 0);
         page.markDirty();
         expected.assign(page->pageData.get(), PAGE_SIZE);
@@ -691,7 +691,7 @@ TEST_F(BufferManagerTest, FlushUncachedPagePersistsSuppliedPageInSelectedFile) {
 
     Page supplied;
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(std::string("uncached data")));
+    tuple->addField(std::make_unique<Field>(std::string("uncached data"), "value"));
     ASSERT_EQ(supplied.addTuple(std::move(tuple), nullptr), 0);
     const std::string expected(supplied.pageData.get(), PAGE_SIZE);
     const BufferManager &readOnlyManager = bm;
@@ -730,7 +730,7 @@ TEST_F(BufferManagerTest, FlushUncachedPageOutOfRangeDoesNotExtendOrOverwriteFil
     bm.getAvailablePageId("fm");
     Page supplied;
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(42));
+    tuple->addField(std::make_unique<Field>(42, "value"));
     ASSERT_EQ(supplied.addTuple(std::move(tuple), nullptr), 0);
     // The void wrapper currently discards the storage layer's false result.
     EXPECT_NO_THROW(bm.flushUncachedPage(
