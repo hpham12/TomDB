@@ -27,7 +27,6 @@ bool InsertOperator::next() {
         return false;
     }
     index->insert(keyToInsert, std::move(tupleToInsert));
-    std::cout<<"inserted"<<std::endl;
     inserted = true;
     return true;
 }
@@ -62,13 +61,29 @@ bool SelectOperator::next() {
 
     index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
 
-    currentOutput = index->get(lookupKey);
+    auto output = index->get(lookupKey);
+
+    if (output != nullptr) {
+        currentOutput = std::make_unique<Tuple>();
+        for (std::size_t i = 0; i < output->getFieldCount(); ++i) {
+            auto field = output->getField(i);
+            if (selectAll || fieldNames.contains(field->name)) {
+                currentOutput->addField(field->clone());
+            }
+        }
+    } else {
+        currentOutput = nullptr;
+    }
 
     hasNext = false;
     return true;
 }
 
 std::unique_ptr<Tuple> SelectOperator::getOutput() {
+    if (currentOutput == nullptr) {
+        return nullptr;
+    }
+
     return currentOutput->clone();
 }
 
@@ -129,12 +144,28 @@ bool DropDocumentOperator::next() {
      *
      * Then, set documentDropped -> true;
      */
-    return false;
+    if (!metadata->containsDocument(document)) {
+        return false;
+    }
+
+    // Create index and data files
+    std::string indexFileName = document + "_tomdb.idx";
+    std::string dataFileName = document + "_tomdb.dat";
+
+    std::string indexFilePath = "/.tomdb/" + indexFileName;
+    std::string dataFilePath = "/.tomdb/" + dataFileName;
+
+    metadata->removeDocument(document);
+
+    std::filesystem::remove(indexFilePath);
+    std::filesystem::remove(dataFilePath);
+
+    metadata->flush();
+
+    return true;
 }
 
-void DropDocumentOperator::close() {
-    // close index and data files
-}
+void DropDocumentOperator::close() {}
 
 std::unique_ptr<Tuple> DropDocumentOperator::getOutput() {
     return nullptr;
@@ -151,7 +182,7 @@ bool PrintOperator::next() {
 
 std::unique_ptr<Tuple> PrintOperator::getOutput() {
     auto output = input->getOutput();
-    if (!output) {
+    if (output == nullptr) {
         return nullptr;
     }
 

@@ -26,11 +26,12 @@ std::unique_ptr<Operator> QueryProcessor::parse(string query, const shared_ptr<M
     std::smatch match;
     std::unique_ptr<Operator> op;
     if (std::regex_match(query, match, SELECT_PATTERN)) {
-        std::vector<std::string> fieldNames;
+        std::unordered_set<std::string> fieldNames;
         const std::string fieldList = match[1].str();
+        const bool selectAll = fieldList == "*";
         static const std::regex fieldPattern(R"([A-Za-z_][A-Za-z0-9_]*)");
         for (std::sregex_iterator it(fieldList.begin(), fieldList.end(), fieldPattern), end; it != end; ++it) {
-            fieldNames.push_back(it->str());
+            fieldNames.emplace(it->str());
         }
 
         const std::string documentName = match[2].str();
@@ -41,26 +42,22 @@ std::unique_ptr<Operator> QueryProcessor::parse(string query, const shared_ptr<M
             throw std::invalid_argument("Invalid query type");
         }
 
-        auto insertOp = std::make_unique<SelectOperator>(lookupKeyNumber, documentName, std::move(fieldNames));
+        auto selectOp = std::make_unique<SelectOperator>(lookupKeyNumber, documentName, std::move(fieldNames), selectAll);
         if (display) {
-            op = std::make_unique<PrintOperator>(std::move(insertOp));
+            op = std::make_unique<PrintOperator>(std::move(selectOp));
         } else {
-            op = std::move(insertOp);
+            op = std::move(selectOp);
         }
-        std::cout << "select" << '\n';
     } else if (std::regex_match(query, match, INSERT_PATTERN)) {
         auto parsed = parseInsertJson(match[2].str());
         if (!parsed) {
             throw std::invalid_argument("Invalid query type");
         }
         op = std::make_unique<InsertOperator>(std::move(parsed->tuple), parsed->key, match[1].str());
-        std::cout << "insert" << '\n';
     } else if (std::regex_match(query, match, CREATE_PATTERN)) {
         op = std::make_unique<CreateDocumentOperator>(match[1].str(), metadata);
-        std::cout << "create" << '\n';
     } else if (std::regex_match(query, match, REMOVE_PATTERN)) {
         op = std::make_unique<DropDocumentOperator>(match[1].str(), metadata);
-        std::cout << "remove" << '\n';
     } else {
         throw std::invalid_argument("Invalid query type");
     }

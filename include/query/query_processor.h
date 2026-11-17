@@ -11,7 +11,7 @@
 #include "operators.h"
 
 inline std::regex SELECT_PATTERN(
-    R"(^\s*SELECT\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)\s+WHERE\s+ID\s*=\s*([0-9]+)\s*;?\s*$)",
+    R"(^\s*SELECT\s+(\*|[A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)\s+WHERE\s+ID\s*=\s*([0-9]+)\s*;?\s*$)",
     std::regex::icase);
 
 inline const std::regex INSERT_PATTERN(

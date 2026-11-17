@@ -54,3 +54,34 @@ TEST(QueryProcessorDocumentTest, RejectsInvalidDocumentCommands) {
         EXPECT_FALSE(std::regex_match(query, REMOVE_PATTERN)) << query;
     }
 }
+
+TEST(QueryProcessorSelectTest, ExtractsWildcardAndLookup) {
+    const std::string query = "  select * FROM users WHERE id = 42;  ";
+    std::smatch match;
+
+    ASSERT_TRUE(std::regex_match(query, match, SELECT_PATTERN));
+    EXPECT_EQ(match[1].str(), "*");
+    EXPECT_EQ(match[2].str(), "users");
+    EXPECT_EQ(match[3].str(), "42");
+}
+
+TEST(QueryProcessorSelectTest, ExtractsNamedFieldsAndLookup) {
+    const std::string query = "SELECT name, age FROM users WHERE ID = 1";
+    std::smatch match;
+
+    ASSERT_TRUE(std::regex_match(query, match, SELECT_PATTERN));
+    EXPECT_EQ(match[1].str(), "name, age");
+    EXPECT_EQ(match[2].str(), "users");
+    EXPECT_EQ(match[3].str(), "1");
+}
+
+TEST(QueryProcessorSelectTest, RejectsWildcardMixedWithNames) {
+    for (const std::string query : {
+             "SELECT *, name FROM users WHERE ID = 1",
+             "SELECT name, * FROM users WHERE ID = 1",
+             "SELECT ** FROM users WHERE ID = 1",
+             "SELECT * FROM users WHERE ID = -1",
+         }) {
+        EXPECT_FALSE(std::regex_match(query, SELECT_PATTERN)) << query;
+    }
+}

@@ -35,8 +35,9 @@ class SelectOperator : public Operator {
     std::unique_ptr<Tuple> currentOutput;
     std::unique_ptr<BTree<Key> > index;
     std::string document;
-    std::vector<std::string> fieldNames;
+    std::unordered_set<std::string> fieldNames;
     bool hasNext = true;
+    bool selectAll;
 
 public:
     void open() override;
@@ -47,8 +48,8 @@ public:
 
     void close() override;
 
-    SelectOperator(Key lookupKey, std::string document, std::vector<std::string> fieldNames = {})
-        : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)) {
+    SelectOperator(Key lookupKey, std::string document, std::unordered_set<std::string> fieldNames = {}, bool selectAll = false)
+        : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)), selectAll(selectAll) {
     }
 
     ~SelectOperator() override = default;
@@ -114,7 +115,6 @@ public:
 
 class DropDocumentOperator : public Operator {
     std::string document;
-    bool documentDropped = false;
     std::shared_ptr<Metadata> metadata;
 
 public:
