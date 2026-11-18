@@ -42,6 +42,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 add_library(tomdb_lib
         src/metadata.cpp
         src/query/insert_json.cpp
+        src/query/operators.cpp
         src/records/field.cpp
         src/records/tuple.cpp
         src/records/page.cpp
@@ -106,7 +107,6 @@ add_executable(tomdb
         include/query/query_processor.h
         include/query/operators.h
         src/query/query_processor.cpp
-        src/query/operators.cpp
 )
 
 target_link_libraries(tomdb
@@ -137,14 +137,15 @@ add_executable(tomdb_tests
         test/test_utils.h
         test/buffer/buffer_frame_test.cpp
         test/buffer/frame_lock_table_test.cpp
-        test/buffer/page_guard.cpp
+        test/buffer/page_guard_test.cpp
         test/index/b_tree_test.cpp
         test/index/node_test.cpp
         test/index/node_serializer_test.cpp
         test/query/insert_json_test.cpp
         test/query/query_processor_test.cpp
         include/query/query_processor.h
-        test/metadata.cpp
+        test/metadata_test.cpp
+        test/query/operators_test.cpp
 )
 
 target_link_libraries(tomdb_tests

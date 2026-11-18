@@ -53,7 +53,7 @@ std::unique_ptr<Operator> QueryProcessor::parse(string query, const shared_ptr<M
         if (!parsed) {
             throw std::invalid_argument("Invalid query type");
         }
-        op = std::make_unique<InsertOperator>(std::move(parsed->tuple), parsed->key, match[1].str());
+        op = std::make_unique<InsertOperator>(std::move(parsed->tuple), parsed->key, match[1].str(), metadata);
     } else if (std::regex_match(query, match, CREATE_PATTERN)) {
         op = std::make_unique<CreateDocumentOperator>(match[1].str(), metadata);
     } else if (std::regex_match(query, match, REMOVE_PATTERN)) {

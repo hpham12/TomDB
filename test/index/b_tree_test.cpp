@@ -709,8 +709,8 @@ TEST(BTreeTest, MaximumLengthFileManagerIdsPersistAcrossRootSplit) {
         }
     } cleanup{indexPath, dataPath};
 
-    const std::string indexId(255, 'i');
-    const std::string dataId(255, 'd');
+    const std::string indexId(8, 'i');
+    const std::string dataId(8, 'd');
     const int count = LeafNode<int>::getKCapacity() + 1;
     PageID rootId;
     {

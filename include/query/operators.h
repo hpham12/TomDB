@@ -36,8 +36,11 @@ class SelectOperator : public Operator {
     std::unique_ptr<BTree<Key> > index;
     std::string document;
     std::unordered_set<std::string> fieldNames;
+    std::shared_ptr<Metadata> metadata;
     bool hasNext = true;
     bool selectAll;
+
+    FRIEND_TEST(SelectOperatorTest, TestE2ELifeCycle);
 
 public:
     void open() override;
@@ -48,8 +51,14 @@ public:
 
     void close() override;
 
-    SelectOperator(Key lookupKey, std::string document, std::unordered_set<std::string> fieldNames = {}, bool selectAll = false)
-        : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)), selectAll(selectAll) {
+    SelectOperator(Key lookupKey, std::string document, std::unordered_set<std::string> fieldNames, bool selectAll,
+                   const std::shared_ptr<Metadata> &metadata)
+        : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)), selectAll(selectAll),
+          metadata(metadata) {
+    }
+
+    bool isIndexValid() const {
+        return index != nullptr;
     }
 
     ~SelectOperator() override = default;
@@ -67,7 +76,8 @@ public:
 
     void close() override;
 
-    PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {}
+    PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {
+    }
 
     ~PrintOperator() override = default;
 };
@@ -78,6 +88,7 @@ class InsertOperator : public Operator {
     std::string document;
     std::unique_ptr<BTree<Key> > index;
     bool inserted = false;
+    std::shared_ptr<Metadata> metadata;
 
 public:
     void open() override;
@@ -88,8 +99,13 @@ public:
 
     void close() override;
 
-    InsertOperator(std::unique_ptr<Tuple> tupleToInsert, Key key, std::string document)
-        : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key), document(std::move(document)) {
+    InsertOperator(std::unique_ptr<Tuple> tupleToInsert, Key key, std::string document,
+                   const std::shared_ptr<Metadata> &metadata)
+        : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key), document(std::move(document)), metadata(metadata) {
+    }
+
+    [[nodiscard]] bool isIndexValid() const {
+        return index != nullptr;
     }
 
     ~InsertOperator() override = default;
@@ -108,7 +124,10 @@ public:
 
     void close() override;
 
-    CreateDocumentOperator(std::string document, const std::shared_ptr<Metadata> &metadata) : document(std::move(document)), metadata(metadata) {}
+    CreateDocumentOperator(std::string document,
+                           const std::shared_ptr<Metadata> &metadata) : document(std::move(document)),
+                                                                        metadata(metadata) {
+    }
 
     ~CreateDocumentOperator() override = default;
 };
@@ -126,8 +145,9 @@ public:
 
     void close() override;
 
-    DropDocumentOperator(std::string document, const std::shared_ptr<Metadata> &metadata) : document(std::move(document)),
-        metadata(metadata) {
+    DropDocumentOperator(std::string document,
+                         const std::shared_ptr<Metadata> &metadata) : document(std::move(document)),
+                                                                      metadata(metadata) {
     };
 
     ~DropDocumentOperator() override = default;

@@ -12,18 +12,22 @@
 
 // ---- InsertOperator ---- //
 void InsertOperator::open() {
-    // TODO: Create BTree instance
+    if (!metadata->containsDocument(document)) {
+        std::cerr << "Document not exist" << '\n';
+        return;
+    }
+    // Create BTree instance
     std::string indexFileName = document + "_tomdb.idx";
     std::string dataFileName = document + "_tomdb.dat";
 
     std::string indexFilePath = "/.tomdb/" + indexFileName;
     std::string dataFilePath = "/.tomdb/" + dataFileName;
 
-    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
 
 bool InsertOperator::next() {
-    if (inserted) {
+    if (inserted || index == nullptr) {
         return false;
     }
     index->insert(keyToInsert, std::move(tupleToInsert));
@@ -39,13 +43,17 @@ void InsertOperator::close() {}
 
 // ---- SelectOperator ---- //
 void SelectOperator::open() {
+    if (!metadata->containsDocument(document)) {
+        std::cerr << "Document not exist" << '\n';
+        return;
+    }
     std::string indexFileName = document + "_tomdb.idx";
     std::string dataFileName = document + "_tomdb.dat";
 
     std::string indexFilePath = "/.tomdb/" + indexFileName;
     std::string dataFilePath = "/.tomdb/" + dataFileName;
 
-    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
 
 bool SelectOperator::next() {
@@ -59,7 +67,7 @@ bool SelectOperator::next() {
     std::string indexFilePath = "/.tomdb/" + indexFileName;
     std::string dataFilePath = "/.tomdb/" + dataFileName;
 
-    index = std::make_unique<BTree<Key>>(indexFilePath, indexFileName, dataFilePath, dataFileName);
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 
     auto output = index->get(lookupKey);
 

@@ -57,3 +57,4 @@ The diagram shows the broader architecture direction; the roadmap below distingu
 6. **Add update query logic [b_tree.tpp](include/index/b_tree.tpp)**
 7. **Refactor serialization/deserialization logic for Field and Tuple (little/big endian)**
 8. **Audit memory ownership**
+9. BTree index should be shared by all clients to facilitate concurrency

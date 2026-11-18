@@ -13,7 +13,7 @@
 #include "node.h"
 
 // Version 1: integral keys only. All integers are little-endian; names are
-// uint8-length-prefixed bytes (at most 255 bytes per name). Only populated entries are stored.
+// uint8-length-prefixed bytes (at most 8 bytes per name). Only populated entries are stored.
 template<class K>
 class NodeSerializer {
 public:
@@ -40,7 +40,7 @@ private:
 
         void pageId(const PageID &id) {
             if (id.fileManagerId.size() > MAX_FILE_MANAGER_NAME_BYTES) {
-                throw std::length_error("File-manager name exceeds 255 bytes");
+                throw std::length_error("File-manager name exceeds 8 bytes");
             }
             integer(id.fileManagerId.size(), NodeFormat::NAME_LENGTH_BYTES);
             for (unsigned char c: id.fileManagerId) {
@@ -82,7 +82,7 @@ private:
         PageID pageId() {
             const auto length = integer(NodeFormat::NAME_LENGTH_BYTES);
             if (length > MAX_FILE_MANAGER_NAME_BYTES) {
-                throw std::invalid_argument("File-manager name exceeds 255 bytes");
+                throw std::invalid_argument("File-manager name exceeds 8 bytes");
             }
             if (length > bytes.size() - offset) {
                 throw std::invalid_argument("Truncated file-manager name");
