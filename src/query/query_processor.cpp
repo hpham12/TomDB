@@ -42,7 +42,7 @@ std::unique_ptr<Operator> QueryProcessor::parse(string query, const shared_ptr<M
             throw std::invalid_argument("Invalid query type");
         }
 
-        auto selectOp = std::make_unique<SelectOperator>(lookupKeyNumber, documentName, std::move(fieldNames), selectAll);
+        auto selectOp = std::make_unique<SelectOperator>(lookupKeyNumber, documentName, std::move(fieldNames), selectAll, metadata);
         if (display) {
             op = std::make_unique<PrintOperator>(std::move(selectOp));
         } else {

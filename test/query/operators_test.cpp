@@ -117,7 +117,6 @@ TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
     std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
     metadata->addDocument("document4");
 
-    // 1. Extract the directory portion and create it if missing
     std::filesystem::create_directories("/.tomdb");
     std::ofstream idx("/.tomdb/document4_tomdb.idx");
     std::ofstream data("/.tomdb/document4_tomdb.dat");

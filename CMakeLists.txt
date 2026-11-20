@@ -43,6 +43,7 @@ add_library(tomdb_lib
         src/metadata.cpp
         src/query/insert_json.cpp
         src/query/operators.cpp
+        src/query/query_processor.cpp
         src/records/field.cpp
         src/records/tuple.cpp
         src/records/page.cpp

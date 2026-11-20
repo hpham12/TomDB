@@ -41,6 +41,7 @@ class SelectOperator : public Operator {
     bool selectAll;
 
     FRIEND_TEST(SelectOperatorTest, TestE2ELifeCycle);
+    FRIEND_TEST(QueryProcessorTest, ParseSelectQueryWithoutDisplay);
 
 public:
     void open() override;
@@ -90,6 +91,8 @@ class InsertOperator : public Operator {
     bool inserted = false;
     std::shared_ptr<Metadata> metadata;
 
+    FRIEND_TEST(QueryProcessorTest, ParseInsertQuery);
+
 public:
     void open() override;
 
@@ -115,6 +118,8 @@ class CreateDocumentOperator : public Operator {
     std::string document;
     std::shared_ptr<Metadata> metadata;
 
+    FRIEND_TEST(QueryProcessorTest, ParseCreateDocument);
+
 public:
     void open() override;
 
@@ -135,6 +140,8 @@ public:
 class DropDocumentOperator : public Operator {
     std::string document;
     std::shared_ptr<Metadata> metadata;
+
+    FRIEND_TEST(QueryProcessorTest, ParseDropDocument);
 
 public:
     void open() override;
