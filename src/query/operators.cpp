@@ -31,7 +31,10 @@ bool InsertOperator::next() {
     if (inserted || index == nullptr) {
         return false;
     }
-    index->insert(keyToInsert, std::move(tupleToInsert));
+    if (!index->insert(keyToInsert, std::move(tupleToInsert))) {
+        return false;
+    }
+
     inserted = true;
     return true;
 }
@@ -107,9 +110,8 @@ void CreateDocumentOperator::open() {
 
 bool CreateDocumentOperator::next() {
     /**
-     * Check documentCreated, whether document exists in metadata. If exists, throw error. If not, create index and data file
-     * Index file format: {document}_tomdb.idx
-     * Data file format: {document}_tomdb.dat
+     * Check documentCreated, whether document exists in metadata. If exists, throw error.
+     * If not, create index and data file
      *
      * Then, update and flush metadata
      */
@@ -127,7 +129,10 @@ bool CreateDocumentOperator::next() {
     std::ofstream createdIndexFile(indexFilePath);
     std::ofstream createdDataFile(dataFilePath);
 
-    metadata->addDocument(document);
+    if (!metadata->addDocument(document)) {
+        return false;
+    }
+
     metadata->flush();
 
     return true;
