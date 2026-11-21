@@ -27,8 +27,8 @@ The diagram shows the broader architecture direction; the roadmap below distingu
 ✅ B-tree indexing
 
 ### Query layer
-🚧 Query parser \
-⏳ Query planner and execution engine
+✅ Query parser \
+✅ Query planner and execution engine
 
 ### Reliability
 ⏳ Transactions and concurrency control \
