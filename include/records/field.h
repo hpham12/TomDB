@@ -18,29 +18,30 @@ public:
     FieldType type;
     std::unique_ptr<char[]> value;
     uint16_t size;
+    std::string name;
 
     // constructors
-    explicit Field(int i);
+    explicit Field(int i, std::string name);
 
-    explicit Field(const std::string& s);
+    explicit Field(const std::string& s, std::string name);
 
-    explicit Field(float f);
+    explicit Field(float f, std::string name);
 
     /**
      * Serialize field (byte representation, little endian), with the following format:
      *
-     * <code>[fieldType][fieldSize][fieldData]</code>
+     * <code>[fieldType][fieldSize][fieldData][fieldNameSize][fieldName]</code>
      */
-    std::string serialize() const;
+    [[nodiscard]] std::string serialize() const;
 
     static std::unique_ptr<Field> deserialize(std::istream &in);
 
-    std::unique_ptr<Field> clone() const;
+    [[nodiscard]] std::unique_ptr<Field> clone() const;
 
     /**
      * Total size (bytes) of the serialized field
      */
-    uint32_t getSize() const;
+    [[nodiscard]] uint32_t getSize() const;
 };
 
 #endif //TOMDB_FIELD_H

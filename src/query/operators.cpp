@@ -4,15 +4,39 @@
 
 #include "query/operators.h"
 
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <format>
+
 // ---- InsertOperator ---- //
 void InsertOperator::open() {
-    // TODO: Create BTree instance
+    if (!metadata->containsDocument(document)) {
+        std::cerr << "Document not exist" << '\n';
+        return;
+    }
+    // Create BTree instance
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
 
 bool InsertOperator::next() {
-    // TODO: check hasNext, invoke BTree insert, then set hasNext to false
+    if (inserted || index == nullptr) {
+        return false;
+    }
+    if (!index->insert(keyToInsert, std::move(tupleToInsert))) {
+        return false;
+    }
 
-    return false;
+    inserted = true;
+    return true;
 }
 
 std::unique_ptr<Tuple> InsertOperator::getOutput() {
@@ -23,18 +47,56 @@ void InsertOperator::close() {}
 
 // ---- SelectOperator ---- //
 void SelectOperator::open() {
-    // TODO: Create BTree instance
+    if (!metadata->containsDocument(document)) {
+        std::cerr << "Document not exist" << '\n';
+        return;
+    }
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
 
 bool SelectOperator::next() {
-    // TODO: check hasNext, Invoke BTree select, then set hasNext to false
+    if (!hasNext) {
+        return false;
+    }
 
-    return false;
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
+
+    auto output = index->get(lookupKey);
+
+    if (output != nullptr) {
+        currentOutput = std::make_unique<Tuple>();
+        for (std::size_t i = 0; i < output->getFieldCount(); ++i) {
+            auto field = output->getField(i);
+            if (selectAll || fieldNames.contains(field->name)) {
+                currentOutput->addField(field->clone());
+            }
+        }
+    } else {
+        currentOutput = nullptr;
+    }
+
+    hasNext = false;
+    return true;
 }
 
 std::unique_ptr<Tuple> SelectOperator::getOutput() {
+    if (currentOutput == nullptr) {
+        return nullptr;
+    }
 
-    return nullptr;
+    return currentOutput->clone();
 }
 
 void SelectOperator::close() {
@@ -48,14 +110,32 @@ void CreateDocumentOperator::open() {
 
 bool CreateDocumentOperator::next() {
     /**
-     * TODO: Check documentCreated, whether document exists in metadata. If exists, throw error. If not, create index and data file
-     * Index file format: {document}_tomdb.idx
-     * Data file format: {document}_tomdb.dat
+     * Check documentCreated, whether document exists in metadata. If exists, throw error.
+     * If not, create index and data file
      *
      * Then, update and flush metadata
      */
+    if (metadata->containsDocument(document)) {
+        return false;
+    }
 
-    return false;
+    // Create index and data files
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    std::ofstream createdIndexFile(indexFilePath);
+    std::ofstream createdDataFile(dataFilePath);
+
+    if (!metadata->addDocument(document)) {
+        return false;
+    }
+
+    metadata->flush();
+
+    return true;
 }
 
 void CreateDocumentOperator::close() {
@@ -73,17 +153,33 @@ void DropDocumentOperator::open() {
 
 bool DropDocumentOperator::next() {
     /**
-     * TODO: Check documentDropped. Check whether document exists in metadata. If not exists, throw error. If not, remove index and data file
+     * Check documentDropped. Check whether document exists in metadata. If not exists, throw error. If not, remove index and data file
      * Then, update and flush metadata
      *
      * Then, set documentDropped -> true;
      */
-    return false;
+    if (!metadata->containsDocument(document)) {
+        return false;
+    }
+
+    // Create index and data files
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    metadata->removeDocument(document);
+
+    std::filesystem::remove(indexFilePath);
+    std::filesystem::remove(dataFilePath);
+
+    metadata->flush();
+
+    return true;
 }
 
-void DropDocumentOperator::close() {
-    // close index and data files
-}
+void DropDocumentOperator::close() {}
 
 std::unique_ptr<Tuple> DropDocumentOperator::getOutput() {
     return nullptr;
@@ -99,8 +195,42 @@ bool PrintOperator::next() {
 }
 
 std::unique_ptr<Tuple> PrintOperator::getOutput() {
-    // TODO: invoke input.getOutput(), then format for printing only
-    return nullptr;
+    auto output = input->getOutput();
+    if (output == nullptr) {
+        return nullptr;
+    }
+
+    std::ostringstream formatted;
+    formatted << '{';
+    for (size_t i = 0; i < output->getFieldCount(); ++i) {
+        auto field = output->getField(i);
+        if (i != 0) {
+            formatted << ", ";
+        }
+        formatted << field->name << ": ";
+        switch (field->type) {
+            case INTEGER: {
+                int value;
+                std::memcpy(&value, field->value.get(), sizeof(value));
+                formatted << value;
+                break;
+            }
+            case FLOAT: {
+                float value;
+                std::memcpy(&value, field->value.get(), sizeof(value));
+                formatted << value;
+                break;
+            }
+            case STRING:
+                formatted << std::quoted(std::string(field->value.get(), field->size));
+                break;
+            default:
+                throw std::logic_error("Unknown field type");
+        }
+    }
+    formatted << "}\n";
+    std::cout << formatted.str();
+    return output;
 }
 
 void PrintOperator::close() {

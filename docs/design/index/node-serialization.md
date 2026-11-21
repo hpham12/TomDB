@@ -87,5 +87,7 @@ the capacity. C++ object sizes may exceed `PAGE_SIZE`; only serialized bytes are
 written to disk. Compile-time checks ensure metadata and entries fit and counts
 remain representable as `uint16_t`. Runtime encoding checks remain in place.
 
+Indexes written with file manager IDs longer than 8 bytes must be rebuilt.
+
 BTree insertion/loading is still stubbed; this utility does not implement those
 operations or migrate older raw layouts.

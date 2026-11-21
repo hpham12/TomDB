@@ -41,4 +41,4 @@ Both shared and exclusive guards expose the same mutable interface. Lock-mode di
 
 ## Existing validation
 
-[Frame tests](../../../test/buffer/buffer_frame_test.cpp) cover dirty marking and reset. [Guard tests](../../../test/buffer/page_guard.cpp) cover accessors, const access, empty and moved-from state, move construction and assignment, self-move, destruction with dirty propagation, and cleanup failure during assignment. [Buffer-manager tests](../../../test/buffer/buffer_manager_test.cpp) exercise guards with real pinning and release.
+[Frame tests](../../../test/buffer/buffer_frame_test.cpp) cover dirty marking and reset. [Guard tests](../../../test/buffer/page_guard_test.cpp) cover accessors, const access, empty and moved-from state, move construction and assignment, self-move, destruction with dirty propagation, and cleanup failure during assignment. [Buffer-manager tests](../../../test/buffer/buffer_manager_test.cpp) exercise guards with real pinning and release.

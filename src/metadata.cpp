@@ -67,6 +67,7 @@ std::array<char, METADATA_SIZE> Metadata::serialize() const {
         offset += sizeof(documentNameLength);
         document.copy(buffer.data() + offset, documentNameLength);
         offset += documentNameLength;
+        currentSize += documentNameLength + sizeof(documentNameLength);
     }
 
     return buffer;

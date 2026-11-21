@@ -5,6 +5,7 @@
 #ifndef TOMDB_OPERATORS_H
 #define TOMDB_OPERATORS_H
 #include <utility>
+#include <vector>
 
 #include "metadata.h"
 #include "index/b_tree.h"
@@ -34,7 +35,15 @@ class SelectOperator : public Operator {
     std::unique_ptr<Tuple> currentOutput;
     std::unique_ptr<BTree<Key> > index;
     std::string document;
-    bool hasNext = false;
+    std::unordered_set<std::string> fieldNames;
+    std::shared_ptr<Metadata> metadata;
+    bool hasNext = true;
+    bool selectAll;
+    std::string rootPath;
+
+    FRIEND_TEST(SelectOperatorTest, TestE2ELifeCycle);
+    FRIEND_TEST(QueryProcessorTest, ParseSelectQueryWithoutDisplay);
+    FRIEND_TEST(PrintOperatorTest, TestGetOutput);
 
 public:
     void open() override;
@@ -45,7 +54,16 @@ public:
 
     void close() override;
 
-    SelectOperator(Key lookupKey, std::string document) : lookupKey(lookupKey), document(std::move(document)) {
+    SelectOperator(Key lookupKey, std::string document,
+                   std::unordered_set<std::string> fieldNames, bool selectAll,
+                   const std::shared_ptr<Metadata> &metadata,
+                   const std::string &rootPath = ROOT_PATH
+    ) : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)), selectAll(selectAll),
+        metadata(metadata), rootPath(rootPath) {
+    }
+
+    bool isIndexValid() const {
+        return index != nullptr;
     }
 
     ~SelectOperator() override = default;
@@ -63,7 +81,8 @@ public:
 
     void close() override;
 
-    PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {}
+    PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {
+    }
 
     ~PrintOperator() override = default;
 };
@@ -73,7 +92,11 @@ class InsertOperator : public Operator {
     Key keyToInsert;
     std::string document;
     std::unique_ptr<BTree<Key> > index;
-    bool hasNext = false;
+    bool inserted = false;
+    std::shared_ptr<Metadata> metadata;
+    std::string rootPath;
+
+    FRIEND_TEST(QueryProcessorTest, ParseInsertQuery);
 
 public:
     void open() override;
@@ -84,8 +107,16 @@ public:
 
     void close() override;
 
-    InsertOperator(std::unique_ptr<Tuple> tupleToInsert, Key key, std::string document)
-        : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key), document(std::move(document)) {
+    InsertOperator(std::unique_ptr<Tuple> tupleToInsert,
+                   Key key, std::string document,
+                   const std::shared_ptr<Metadata> &metadata,
+                   const std::string &rootPath = ROOT_PATH)
+        : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key),
+          document(std::move(document)), metadata(metadata), rootPath(rootPath) {
+    }
+
+    [[nodiscard]] bool isIndexValid() const {
+        return index != nullptr;
     }
 
     ~InsertOperator() override = default;
@@ -93,8 +124,10 @@ public:
 
 class CreateDocumentOperator : public Operator {
     std::string document;
-    std::unique_ptr<Metadata> metadata;
-    bool documentCreated = false;
+    std::shared_ptr<Metadata> metadata;
+    std::string rootPath;
+
+    FRIEND_TEST(QueryProcessorTest, ParseCreateDocument);
 
 public:
     void open() override;
@@ -105,16 +138,21 @@ public:
 
     void close() override;
 
-    CreateDocumentOperator(std::string document) : document(std::move(document)) {
-    };
+    CreateDocumentOperator(std::string document,
+                           const std::shared_ptr<Metadata> &metadata,
+                           const std::string &rootPath = ROOT_PATH)
+        : document(std::move(document)), metadata(metadata), rootPath(rootPath) {
+    }
 
     ~CreateDocumentOperator() override = default;
 };
 
 class DropDocumentOperator : public Operator {
     std::string document;
-    bool documentDropped = false;
-    std::unique_ptr<Metadata> metadata;
+    std::shared_ptr<Metadata> metadata;
+    std::string rootPath;
+
+    FRIEND_TEST(QueryProcessorTest, ParseDropDocument);
 
 public:
     void open() override;
@@ -125,8 +163,10 @@ public:
 
     void close() override;
 
-    DropDocumentOperator(std::string document, std::unique_ptr<Metadata> metadata) : document(std::move(document)),
-        metadata(std::move(metadata)) {
+    DropDocumentOperator(std::string document,
+                         const std::shared_ptr<Metadata> &metadata,
+                         const std::string &rootPath = ROOT_PATH)
+        : document(std::move(document)), metadata(metadata), rootPath(rootPath) {
     };
 
     ~DropDocumentOperator() override = default;

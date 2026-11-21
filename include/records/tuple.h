@@ -34,6 +34,8 @@ public:
 
     void addField(std::unique_ptr<Field> field);
 
+    [[nodiscard]] size_t getFieldCount() const { return fields.size(); }
+
     std::unique_ptr<Field> getField(size_t index);
 };
 

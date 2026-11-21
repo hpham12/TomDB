@@ -72,25 +72,28 @@ TEST(BTreeTest, Insert) {
     // setup tuple
 
     std::unique_ptr<Tuple> tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(1));
-    tuple->addField(std::make_unique<Field>((float) 123.123));
-    tuple->addField(std::make_unique<Field>("Hello World"));
+    tuple->addField(std::make_unique<Field>(1, "age"));
+    tuple->addField(std::make_unique<Field>((float) 123.123, "balance"));
+    tuple->addField(std::make_unique<Field>("Hello World", "message"));
 
     btree.insert(1, std::move(tuple));
 
     auto resultTuple = btree.get(1);
     EXPECT_NE(resultTuple, nullptr);
     auto field1 = resultTuple->getField(0);
+    EXPECT_EQ(field1->name, "age");
     EXPECT_EQ(field1->type, FieldType::INTEGER);
     EXPECT_EQ(field1->size, sizeof(int));
     EXPECT_EQ(*reinterpret_cast<int*>(field1->value.get()), 1);
 
     auto field2 = resultTuple->getField(1);
+    EXPECT_EQ(field2->name, "balance");
     EXPECT_EQ(field2->type, FieldType::FLOAT);
     EXPECT_EQ(field2->size, sizeof(float));
     EXPECT_FLOAT_EQ(*reinterpret_cast<float*>(field2->value.get()), 123.123);
 
     auto field3 = resultTuple->getField(2);
+    EXPECT_EQ(field3->name, "message");
     EXPECT_EQ(field3->type, FieldType::STRING);
     EXPECT_EQ(field3->size, 11);
     EXPECT_STREQ(field3->value.get(), "Hello World");
@@ -103,7 +106,7 @@ TEST(BTreeTest, GetAfterRootSplit) {
     // Fill the root leaf, then verify the public lookup API before it splits.
     for (int key = 0; key < capacity; ++key) {
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>(key, "value"));
         ASSERT_TRUE(tree.insert(key, std::move(tuple)));
     }
     ASSERT_NE(tree.get(1), nullptr);
@@ -111,7 +114,7 @@ TEST(BTreeTest, GetAfterRootSplit) {
 
     // One more insertion promotes the root to an inner node.
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(capacity));
+    tuple->addField(std::make_unique<Field>(capacity, "value"));
     ASSERT_TRUE(tree.insert(capacity, std::move(tuple)));
 
     // Look up every key through get(), covering both leaves and the separator.
@@ -121,7 +124,7 @@ TEST(BTreeTest, GetAfterRootSplit) {
         ASSERT_NO_THROW(result = tree.get(key));
         ASSERT_NE(result, nullptr);
         Tuple expected;
-        expected.addField(std::make_unique<Field>(key));
+        expected.addField(std::make_unique<Field>(key, "value"));
         EXPECT_EQ(result->serialize(), expected.serialize());
     }
     // Missing keys on either side must return nullptr after traversal.
@@ -140,10 +143,10 @@ TEST(BTreeTest, InsertSplitsLeafRoot) {
     for (int key = 0; key <= capacity; ++key) {
         SCOPED_TRACE(key);
         std::unique_ptr<Tuple> tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(1));
-        tuple->addField(std::make_unique<Field>((float) 123.123));
-        tuple->addField(std::make_unique<Field>("Hello World"));
-        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>(1, "value"));
+        tuple->addField(std::make_unique<Field>((float) 123.123, "value"));
+        tuple->addField(std::make_unique<Field>("Hello World", "value"));
+        tuple->addField(std::make_unique<Field>(key, "value"));
         ASSERT_TRUE(tree.insert(key, std::move(tuple)));
     }
 
@@ -191,10 +194,10 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
     for (int key = 0; key < capacity + midpoint; ++key) {
         SCOPED_TRACE(key);
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(1));
-        tuple->addField(std::make_unique<Field>((float) 123.123));
-        tuple->addField(std::make_unique<Field>("Hello World"));
-        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>(1, "value"));
+        tuple->addField(std::make_unique<Field>((float) 123.123, "value"));
+        tuple->addField(std::make_unique<Field>("Hello World", "value"));
+        tuple->addField(std::make_unique<Field>(key, "value"));
         ASSERT_TRUE(tree.insert(key, std::move(tuple)));
     }
 
@@ -219,10 +222,10 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
     // One more insertion splits a leaf that already has a parent.
     const int lastKey = capacity + midpoint;
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(1));
-    tuple->addField(std::make_unique<Field>((float) 123.123));
-    tuple->addField(std::make_unique<Field>("Hello World"));
-    tuple->addField(std::make_unique<Field>(lastKey));
+    tuple->addField(std::make_unique<Field>(1, "value"));
+    tuple->addField(std::make_unique<Field>((float) 123.123, "value"));
+    tuple->addField(std::make_unique<Field>("Hello World", "value"));
+    tuple->addField(std::make_unique<Field>(lastKey, "value"));
     ASSERT_TRUE(tree.insert(lastKey, std::move(tuple)));
 
     file.refresh();
@@ -271,10 +274,10 @@ TEST(BTreeTest, InsertSplitsLeafWithParent) {
         ASSERT_NE(persistedTuple, nullptr);
 
         Tuple expected;
-        expected.addField(std::make_unique<Field>(1));
-        expected.addField(std::make_unique<Field>((float) 123.123));
-        expected.addField(std::make_unique<Field>("Hello World"));
-        expected.addField(std::make_unique<Field>(key));
+        expected.addField(std::make_unique<Field>(1, "value"));
+        expected.addField(std::make_unique<Field>((float) 123.123, "value"));
+        expected.addField(std::make_unique<Field>("Hello World", "value"));
+        expected.addField(std::make_unique<Field>(key, "value"));
         EXPECT_EQ(persistedTuple->serialize(), expected.serialize());
     }
 }
@@ -296,10 +299,10 @@ TEST(BTreeTest, InsertSplitsInnerRoot) {
     const int lastKey = leafCapacity + (innerCapacity - 1) * leafMidpoint + 1;
     auto makeTuple = [](int key) {
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(1));
-        tuple->addField(std::make_unique<Field>((float) 123.123));
-        tuple->addField(std::make_unique<Field>("Hello World"));
-        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>(1, "value"));
+        tuple->addField(std::make_unique<Field>((float) 123.123, "value"));
+        tuple->addField(std::make_unique<Field>("Hello World", "value"));
+        tuple->addField(std::make_unique<Field>(key, "value"));
         return tuple;
     };
     for (int key = 0; key < lastKey; ++key) {
@@ -419,10 +422,10 @@ TEST(BTreeTest, InsertSplitsInnerWithParent) {
     const int lastKey = leafCapacity + (innerCapacity + innerMidpoint) * leafMidpoint + 1;
     auto makeTuple = [](int key) {
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(1));
-        tuple->addField(std::make_unique<Field>((float) 123.123));
-        tuple->addField(std::make_unique<Field>("Hello World"));
-        tuple->addField(std::make_unique<Field>(key));
+        tuple->addField(std::make_unique<Field>(1, "value"));
+        tuple->addField(std::make_unique<Field>((float) 123.123, "value"));
+        tuple->addField(std::make_unique<Field>("Hello World", "value"));
+        tuple->addField(std::make_unique<Field>(key, "value"));
         return tuple;
     };
     for (int key = 0; key < lastKey; ++key) {
@@ -542,8 +545,8 @@ TEST(BTreeTest, BTreePersistence) {
         for (int key : keys) {
             SCOPED_TRACE(key);
             auto tuple = std::make_unique<Tuple>();
-            tuple->addField(std::make_unique<Field>(key));
-            tuple->addField(std::make_unique<Field>("Hello World"));
+            tuple->addField(std::make_unique<Field>(key, "value"));
+            tuple->addField(std::make_unique<Field>("Hello World", "value"));
             ASSERT_TRUE(original.insert(key, std::move(tuple)));
         }
         originalRootId = original.getRootId();
@@ -581,8 +584,8 @@ TEST(BTreeTest, BTreePersistence) {
         auto tuple = reopened.get(key);
         ASSERT_NE(tuple, nullptr);
         Tuple expected;
-        expected.addField(std::make_unique<Field>(key));
-        expected.addField(std::make_unique<Field>("Hello World"));
+        expected.addField(std::make_unique<Field>(key, "value"));
+        expected.addField(std::make_unique<Field>("Hello World", "value"));
         ASSERT_EQ(tuple->serialize(), expected.serialize());
     }
     EXPECT_EQ(reopened.get(-1), nullptr);
@@ -608,8 +611,8 @@ TEST(BTreeTest, InsertRandomOrder) {
     for (int key : keys) {
         SCOPED_TRACE(key);
         auto tuple = std::make_unique<Tuple>();
-        tuple->addField(std::make_unique<Field>(key));
-        tuple->addField(std::make_unique<Field>("Hello World"));
+        tuple->addField(std::make_unique<Field>(key, "value"));
+        tuple->addField(std::make_unique<Field>("Hello World", "value"));
         bool inserted = false;
         ASSERT_NO_THROW(inserted = tree.insert(key, std::move(tuple)));
         ASSERT_TRUE(inserted);
@@ -665,8 +668,8 @@ TEST(BTreeTest, InsertRandomOrder) {
         auto tuple = dataPage->getTuple(record.slotIndex);
         ASSERT_NE(tuple, nullptr);
         Tuple expected;
-        expected.addField(std::make_unique<Field>(key));
-        expected.addField(std::make_unique<Field>("Hello World"));
+        expected.addField(std::make_unique<Field>(key, "value"));
+        expected.addField(std::make_unique<Field>("Hello World", "value"));
         ASSERT_EQ(tuple->serialize(), expected.serialize());
     }
 
@@ -687,4 +690,60 @@ TEST(BTreeTest, InsertRandomOrder) {
     }
     EXPECT_EQ(linkedLeaves, reachedLeaves);
     EXPECT_EQ(recordCount, tupleCount);
+}
+
+TEST(BTreeTest, MaximumLengthFileManagerIdsPersistAcrossRootSplit) {
+    const auto indexPath = generateRandomFilePath();
+    const auto dataPath = generateRandomFilePath();
+    ASSERT_NE(indexPath, dataPath);
+    ASSERT_FALSE(std::filesystem::exists(indexPath));
+    ASSERT_FALSE(std::filesystem::exists(dataPath));
+
+    struct Cleanup {
+        std::filesystem::path index;
+        std::filesystem::path data;
+        ~Cleanup() {
+            std::error_code error;
+            std::filesystem::remove(index, error);
+            std::filesystem::remove(data, error);
+        }
+    } cleanup{indexPath, dataPath};
+
+    const std::string indexId(8, 'i');
+    const std::string dataId(8, 'd');
+    const int count = LeafNode<int>::getKCapacity() + 1;
+    PageID rootId;
+    {
+        BTree<int> tree(indexPath, indexId, dataPath, dataId);
+        const auto originalRoot = tree.getRootId();
+        for (int key = 0; key < count; ++key) {
+            SCOPED_TRACE(key);
+            auto tuple = std::make_unique<Tuple>();
+            tuple->addField(std::make_unique<Field>(key, "value"));
+            ASSERT_TRUE(tree.insert(key, std::move(tuple)));
+        }
+        rootId = tree.getRootId();
+        EXPECT_EQ(rootId.fileManagerId, indexId);
+        ASSERT_NE(rootId, originalRoot);
+    }
+
+    BTree<int> reopened(indexPath, indexId, dataPath, dataId);
+    ASSERT_EQ(reopened.getRootId(), rootId);
+    for (int key = 0; key < count; ++key) {
+        SCOPED_TRACE(key);
+        auto actual = reopened.get(key);
+        ASSERT_NE(actual, nullptr);
+        Tuple expected;
+        expected.addField(std::make_unique<Field>(key, "value"));
+        EXPECT_EQ(actual->serialize(), expected.serialize());
+    }
+
+    auto extra = std::make_unique<Tuple>();
+    extra->addField(std::make_unique<Field>(count, "value"));
+    ASSERT_TRUE(reopened.insert(count, std::move(extra)));
+    auto actual = reopened.get(count);
+    ASSERT_NE(actual, nullptr);
+    Tuple expected;
+    expected.addField(std::make_unique<Field>(count, "value"));
+    EXPECT_EQ(actual->serialize(), expected.serialize());
 }
