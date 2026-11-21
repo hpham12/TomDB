@@ -42,6 +42,7 @@ class SelectOperator : public Operator {
 
     FRIEND_TEST(SelectOperatorTest, TestE2ELifeCycle);
     FRIEND_TEST(QueryProcessorTest, ParseSelectQueryWithoutDisplay);
+    FRIEND_TEST(PrintOperatorTest, TestGetOutput);
 
 public:
     void open() override;

@@ -115,15 +115,39 @@ TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
     std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
-    metadata->addDocument("document4");
+    metadata->addDocument("document5");
 
     std::filesystem::create_directories("/.tomdb");
-    std::ofstream idx("/.tomdb/document4_tomdb.idx");
-    std::ofstream data("/.tomdb/document4_tomdb.dat");
+    std::ofstream idx("/.tomdb/document5_tomdb.idx");
+    std::ofstream data("/.tomdb/document5_tomdb.dat");
 
-    DropDocumentOperator op{"document4", metadata};
+    DropDocumentOperator op{"document5", metadata};
     ASSERT_NO_THROW(op.open());
     ASSERT_TRUE(op.next());
-    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document4_tomdb.idx"));
-    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document4_tomdb.dat"));
+    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document5_tomdb.idx"));
+    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document5_tomdb.dat"));
+}
+
+TEST(PrintOperatorTest, TestGetOutput) {
+    std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
+    metadata->addDocument("document6");
+    std::unique_ptr<Tuple> tuple = std::make_unique<Tuple>();
+
+    tuple->addField(std::make_unique<Field>(123, "name1"));
+    tuple->addField(std::make_unique<Field>((float) 123.123, "name2"));
+    tuple->addField(std::make_unique<Field>("Hello World", "name3"));
+
+    std::unique_ptr<SelectOperator> selectOp = std::make_unique<SelectOperator>(
+        1,
+        "document6",
+        std::unordered_set<std::string>{"name1", "name2", "name3"},
+        false,
+        metadata);
+
+    selectOp->open();
+    selectOp->index->insert(1, tuple->clone());
+
+    PrintOperator printOp(std::move(selectOp));
+
+    ASSERT_NO_THROW(printOp.getOutput());
 }
