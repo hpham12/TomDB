@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <format>
 
 // ---- InsertOperator ---- //
 void InsertOperator::open() {
@@ -17,11 +18,11 @@ void InsertOperator::open() {
         return;
     }
     // Create BTree instance
-    std::string indexFileName = document + "_tomdb.idx";
-    std::string dataFileName = document + "_tomdb.dat";
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = "/.tomdb/" + indexFileName;
-    std::string dataFilePath = "/.tomdb/" + dataFileName;
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
 
     index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
@@ -47,11 +48,11 @@ void SelectOperator::open() {
         std::cerr << "Document not exist" << '\n';
         return;
     }
-    std::string indexFileName = document + "_tomdb.idx";
-    std::string dataFileName = document + "_tomdb.dat";
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = "/.tomdb/" + indexFileName;
-    std::string dataFilePath = "/.tomdb/" + dataFileName;
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
 
     index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 }
@@ -61,11 +62,11 @@ bool SelectOperator::next() {
         return false;
     }
 
-    std::string indexFileName = document + "_tomdb.idx";
-    std::string dataFileName = document + "_tomdb.dat";
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = "/.tomdb/" + indexFileName;
-    std::string dataFilePath = "/.tomdb/" + dataFileName;
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
 
     index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 
@@ -106,7 +107,7 @@ void CreateDocumentOperator::open() {
 
 bool CreateDocumentOperator::next() {
     /**
-     * TODO: Check documentCreated, whether document exists in metadata. If exists, throw error. If not, create index and data file
+     * Check documentCreated, whether document exists in metadata. If exists, throw error. If not, create index and data file
      * Index file format: {document}_tomdb.idx
      * Data file format: {document}_tomdb.dat
      *
@@ -117,11 +118,11 @@ bool CreateDocumentOperator::next() {
     }
 
     // Create index and data files
-    std::string indexFileName = document + "_tomdb.idx";
-    std::string dataFileName = document + "_tomdb.dat";
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = "/.tomdb/" + indexFileName;
-    std::string dataFilePath = "/.tomdb/" + dataFileName;
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
 
     std::ofstream createdIndexFile(indexFilePath);
     std::ofstream createdDataFile(dataFilePath);
@@ -147,7 +148,7 @@ void DropDocumentOperator::open() {
 
 bool DropDocumentOperator::next() {
     /**
-     * TODO: Check documentDropped. Check whether document exists in metadata. If not exists, throw error. If not, remove index and data file
+     * Check documentDropped. Check whether document exists in metadata. If not exists, throw error. If not, remove index and data file
      * Then, update and flush metadata
      *
      * Then, set documentDropped -> true;
@@ -157,11 +158,11 @@ bool DropDocumentOperator::next() {
     }
 
     // Create index and data files
-    std::string indexFileName = document + "_tomdb.idx";
-    std::string dataFileName = document + "_tomdb.dat";
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = "/.tomdb/" + indexFileName;
-    std::string dataFilePath = "/.tomdb/" + dataFileName;
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
 
     metadata->removeDocument(document);
 

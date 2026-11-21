@@ -82,50 +82,87 @@ TEST(SelectOperatorTest, TestE2ELifeCycle) {
 }
 
 TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
-    std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
+    const auto metadataPath = generateRandomFilePath();
+    ASSERT_FALSE(std::filesystem::exists(metadataPath));
+    auto metadata = std::make_shared<Metadata>(metadataPath);
     metadata->addDocument("document3");
 
-    CreateDocumentOperator op{"document3", metadata};
+    CreateDocumentOperator op{"document3", metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());
     ASSERT_FALSE(op.next());
     ASSERT_NO_THROW(op.close());
     ASSERT_EQ(op.getOutput(), nullptr);
+
+    metadata->filestream.close();
+    std::filesystem::remove(metadataPath);
 }
 
 TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
-    std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
+    const auto metadataPath = generateRandomFilePath();
+    ASSERT_FALSE(std::filesystem::exists(metadataPath));
+    const auto document = std::filesystem::path(metadataPath).stem().string();
+    const auto indexPath = "./tmp/" + document + "_tomdb.idx";
+    const auto dataPath = "./tmp/" + document + "_tomdb.dat";
+    std::filesystem::create_directories("./tmp/");
+    ASSERT_FALSE(std::filesystem::exists(indexPath));
+    ASSERT_FALSE(std::filesystem::exists(dataPath));
+    auto metadata = std::make_shared<Metadata>(metadataPath);
 
-    CreateDocumentOperator op{"document3", metadata};
+    CreateDocumentOperator op{document, metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());
     ASSERT_TRUE(op.next());
-    ASSERT_TRUE(std::filesystem::exists("/.tomdb/document3_tomdb.idx"));
-    ASSERT_TRUE(std::filesystem::exists("/.tomdb/document3_tomdb.dat"));
+    ASSERT_TRUE(std::filesystem::exists(indexPath));
+    ASSERT_TRUE(std::filesystem::exists(dataPath));
     ASSERT_NO_THROW(op.close());
-    ASSERT_TRUE(metadata->containsDocument("document3"));
+    ASSERT_TRUE(metadata->containsDocument(document));
     ASSERT_EQ(op.getOutput(), nullptr);
+
+    metadata->filestream.close();
+    std::filesystem::remove(metadataPath);
+    std::filesystem::remove(indexPath);
+    std::filesystem::remove(dataPath);
 }
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
-    std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
+    const auto metadataPath = generateRandomFilePath();
+    ASSERT_FALSE(std::filesystem::exists(metadataPath));
+    auto metadata = std::make_shared<Metadata>(metadataPath);
 
-    DropDocumentOperator op{"document4", metadata};
+    DropDocumentOperator op{"document4", metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());
     ASSERT_FALSE(op.next());
+
+    metadata->filestream.close();
+    std::filesystem::remove(metadataPath);
 }
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
-    std::shared_ptr<Metadata> metadata = std::make_shared<Metadata>();
-    metadata->addDocument("document5");
+    const auto metadataPath = generateRandomFilePath();
+    ASSERT_FALSE(std::filesystem::exists(metadataPath));
+    const auto document = std::filesystem::path(metadataPath).stem().string();
+    const auto indexPath = "./tmp/" + document + "_tomdb.idx";
+    const auto dataPath = "./tmp/" + document + "_tomdb.dat";
+    std::filesystem::create_directories("./tmp/");
+    ASSERT_FALSE(std::filesystem::exists(indexPath));
+    ASSERT_FALSE(std::filesystem::exists(dataPath));
+    auto metadata = std::make_shared<Metadata>(metadataPath);
+    metadata->addDocument(document);
 
-    std::filesystem::create_directories("/.tomdb");
-    std::ofstream idx("/.tomdb/document5_tomdb.idx");
-    std::ofstream data("/.tomdb/document5_tomdb.dat");
+    std::ofstream indexFile(indexPath);
+    std::ofstream dataFile(dataPath);
+    ASSERT_TRUE(indexFile.is_open());
+    ASSERT_TRUE(dataFile.is_open());
+    indexFile.close();
+    dataFile.close();
 
-    DropDocumentOperator op{"document5", metadata};
+    DropDocumentOperator op{document, metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());
     ASSERT_TRUE(op.next());
-    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document5_tomdb.idx"));
-    ASSERT_FALSE(std::filesystem::exists("/.tomdb/document5_tomdb.dat"));
+    ASSERT_FALSE(std::filesystem::exists(indexPath));
+    ASSERT_FALSE(std::filesystem::exists(dataPath));
+
+    metadata->filestream.close();
+    std::filesystem::remove(metadataPath);
 }
 
 TEST(PrintOperatorTest, TestGetOutput) {

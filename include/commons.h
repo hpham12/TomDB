@@ -11,8 +11,13 @@
 
 using namespace std;
 
-inline constexpr string DATABASE_FILE_NAME = "tomdb.data";
-inline constexpr string INDEX_FILE_NAME = "tomdb.index";
+inline constexpr string ROOT_PATH = "/.tomdb/";
+
+inline constexpr string INDEX_FILE_NAME_TEMPLATE = "{}_tomdb.idx";
+
+inline constexpr string DATA_FILE_NAME_TEMPLATE = "{}_tomdb.dat";
+
+inline constexpr size_t MAX_RECORD_SIZE = 1024;
 
 inline constexpr size_t PAGE_SIZE = 4096; // bytes
 
