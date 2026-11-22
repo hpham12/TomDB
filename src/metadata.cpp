@@ -7,8 +7,10 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <format>
 
-Metadata::Metadata(std::string_view path) {
+Metadata::Metadata(std::string_view rootPath, std::string_view metadataFileName): rootPath(rootPath) {
+    const std::string path = std::string(rootPath).append(metadataFileName);
     auto filePath = std::filesystem::path(path);
     if (!std::filesystem::exists(filePath)) {
         if (filePath.has_parent_path()) {
@@ -47,27 +49,28 @@ Metadata::Metadata(std::string_view path) {
     filestream.seekg(0, std::ios::beg);
     filestream.read(buffer.data(), fileSize);
     deserialize(buffer);
+    initializeIndices();
 }
 
 std::array<char, METADATA_SIZE> Metadata::serialize() const {
     size_t offset = 0;
-    size_t currentSize = 0;
+    size_t currentSizeLocal = 0;
     uint16_t totalDocuments = documents.size();
     std::array<char, METADATA_SIZE> buffer;
     memcpy(buffer.data(), &totalDocuments, sizeof(uint16_t));
-    currentSize += sizeof(uint16_t);
+    currentSizeLocal += sizeof(uint16_t);
     offset += sizeof(uint16_t);
 
     for (const auto &document : documents) {
         uint8_t documentNameLength = document.size();
-        if (currentSize + documentNameLength + sizeof(documentNameLength) > METADATA_SIZE) {
+        if (currentSizeLocal + documentNameLength + sizeof(documentNameLength) > METADATA_SIZE) {
             throw std::out_of_range("Metadata size is too big");
         }
         memcpy(buffer.data() + offset, &documentNameLength, sizeof(uint8_t));
         offset += sizeof(documentNameLength);
         document.copy(buffer.data() + offset, documentNameLength);
         offset += documentNameLength;
-        currentSize += documentNameLength + sizeof(documentNameLength);
+        currentSizeLocal += documentNameLength + sizeof(documentNameLength);
     }
 
     return buffer;
@@ -103,7 +106,7 @@ void Metadata::flush() {
 }
 
 bool Metadata::addDocument(const std::string& document) {
-    bool sizeInvalid = document.empty() || document.size() > std::numeric_limits<uint8_t>::max();
+    bool sizeInvalid = document.empty() || document.size() > MAX_FILE_NAME_SIZE;
     bool documentAlreadyExists = documents.contains(document);
 
     if (sizeInvalid || documentAlreadyExists) {
@@ -111,6 +114,7 @@ bool Metadata::addDocument(const std::string& document) {
     }
 
     documents.insert(document);
+    initializeIndex(document);
     return true;
 }
 
@@ -120,5 +124,32 @@ bool Metadata::removeDocument(const std::string& document) {
     }
 
     documents.erase(document);
+
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    std::filesystem::remove(indexFilePath);
+    std::filesystem::remove(dataFilePath);
+
     return true;
+}
+
+void Metadata::initializeIndices() {
+    for (const std::string& document : documents) {
+        initializeIndex(document);
+    }
+}
+
+void Metadata::initializeIndex(const std::string &document) {
+    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
+    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
+
+    std::string indexFilePath = rootPath + indexFileName;
+    std::string dataFilePath = rootPath + dataFileName;
+
+    const auto index = std::make_shared<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
+    indices[document] = index;
 }

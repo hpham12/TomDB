@@ -17,4 +17,13 @@ inline std::string generateRandomFilePath() {
     return std::filesystem::temp_directory_path() / ("tomdb_test" + std::to_string(randomNum) + ".data");
 }
 
+inline std::string generateRandomFileName() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution distr(1, 10000);
+    int randomNum = distr(gen);
+
+    return "tomdb_test" + std::to_string(randomNum);
+}
+
 #endif //TOMDB_TEST_UTILS_H
