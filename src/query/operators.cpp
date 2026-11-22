@@ -49,7 +49,7 @@ void SelectOperator::open() {
 }
 
 bool SelectOperator::next() {
-    if (!hasNext) {
+    if (!hasNext || index == nullptr) {
         return false;
     }
 

@@ -91,7 +91,6 @@ class InsertOperator : public Operator {
     std::shared_ptr<BTree<Key>> index;
     bool inserted = false;
     std::shared_ptr<Metadata> metadata;
-    std::string rootPath;
 
     FRIEND_TEST(QueryProcessorTest, ParseInsertQuery);
 
@@ -106,10 +105,9 @@ public:
 
     InsertOperator(std::unique_ptr<Tuple> tupleToInsert,
                    Key key, std::string document,
-                   const std::shared_ptr<Metadata> &metadata,
-                   const std::string &rootPath = DEFAULT_ROOT_PATH)
+                   const std::shared_ptr<Metadata> &metadata)
         : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key),
-          document(std::move(document)), metadata(metadata), rootPath(rootPath) {
+          document(std::move(document)), metadata(metadata) {
     }
 
     [[nodiscard]] bool isIndexValid() const {

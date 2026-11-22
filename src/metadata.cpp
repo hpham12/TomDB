@@ -134,6 +134,8 @@ bool Metadata::removeDocument(const std::string& document) {
     std::filesystem::remove(indexFilePath);
     std::filesystem::remove(dataFilePath);
 
+    indices.erase(document);
+
     return true;
 }
 
