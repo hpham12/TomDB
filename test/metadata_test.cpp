@@ -64,6 +64,11 @@ TEST_F(MetadataConstructorTest, LoadsDocumentsFromExistingFile) { {
     EXPECT_TRUE(metadata.containsDocument("users"));
     EXPECT_TRUE(metadata.containsDocument("orders"));
     EXPECT_FALSE(metadata.containsDocument("missing"));
+
+    EXPECT_EQ(metadata.getIndex("missing"), nullptr);
+    EXPECT_NE(metadata.getIndex("users"), nullptr);
+    EXPECT_NE(metadata.getIndex("orders"), nullptr);
+
 }
 
 TEST_F(MetadataSerializeTest, WritesZeroDocumentCountForEmptyMetadata) {
