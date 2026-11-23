@@ -11,7 +11,13 @@
 
 using namespace std;
 
-inline constexpr string ROOT_PATH = "/.tomdb/";
+using Key = uint64_t;
+
+inline constexpr string DEFAULT_ROOT_PATH = "/.tomdb/";
+
+inline constexpr string DEFAULT_METADATA_FILE_NAME = "metadata";
+
+inline constexpr size_t MAX_FILE_NAME_SIZE = 50;
 
 inline constexpr string INDEX_FILE_NAME_TEMPLATE = "{}_tomdb.idx";
 

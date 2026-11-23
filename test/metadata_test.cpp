@@ -14,7 +14,9 @@
 
 class MetadataTest : public testing::Test {
 protected:
-    const std::filesystem::path path = generateRandomFilePath();
+    const std::string rootPath = std::filesystem::temp_directory_path().append("/");
+    const std::string fileName = generateRandomFileName();
+    const std::filesystem::path path = rootPath + fileName;
 
     void TearDown() override {
         std::error_code error;
@@ -29,7 +31,7 @@ using MetadataAddDocumentTest = MetadataTest;
 TEST_F(MetadataConstructorTest, CreatesMissingFile) {
     ASSERT_FALSE(std::filesystem::exists(path));
 
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     ASSERT_TRUE(std::filesystem::is_regular_file(path));
     EXPECT_EQ(std::filesystem::file_size(path), 0u);
@@ -40,7 +42,7 @@ TEST_F(MetadataConstructorTest, OpensExistingEmptyFile) {
     std::ofstream(path).close();
     ASSERT_EQ(std::filesystem::file_size(path), 0u);
 
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     EXPECT_FALSE(metadata.containsDocument("users"));
     EXPECT_EQ(std::filesystem::file_size(path), 0u);
@@ -57,15 +59,20 @@ TEST_F(MetadataConstructorTest, LoadsDocumentsFromExistingFile) { {
         ASSERT_TRUE(output.good());
     }
 
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     EXPECT_TRUE(metadata.containsDocument("users"));
     EXPECT_TRUE(metadata.containsDocument("orders"));
     EXPECT_FALSE(metadata.containsDocument("missing"));
+
+    EXPECT_EQ(metadata.getIndex("missing"), nullptr);
+    EXPECT_NE(metadata.getIndex("users"), nullptr);
+    EXPECT_NE(metadata.getIndex("orders"), nullptr);
+
 }
 
 TEST_F(MetadataSerializeTest, WritesZeroDocumentCountForEmptyMetadata) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     const auto bytes = metadata.serialize();
 
@@ -75,7 +82,7 @@ TEST_F(MetadataSerializeTest, WritesZeroDocumentCountForEmptyMetadata) {
 }
 
 TEST_F(MetadataSerializeTest, WritesLengthAndNameForEachDocument) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
     const std::uint16_t expectedCount = 2;
     std::array<char, sizeof(expectedCount) + 13> input{};
     const std::string_view usersFirst("\x05users\x06orders", 13);
@@ -99,7 +106,7 @@ TEST_F(MetadataSerializeTest, WritesLengthAndNameForEachDocument) {
 }
 
 TEST_F(MetadataAddDocumentTest, AddsNewDocument) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     EXPECT_FALSE(metadata.containsDocument("users"));
     EXPECT_TRUE(metadata.addDocument("users"));
@@ -107,16 +114,16 @@ TEST_F(MetadataAddDocumentTest, AddsNewDocument) {
 }
 
 TEST_F(MetadataAddDocumentTest, RejectsEmptyName) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     EXPECT_FALSE(metadata.addDocument(""));
     EXPECT_FALSE(metadata.containsDocument(""));
 }
 
 TEST_F(MetadataAddDocumentTest, EnforcesNameLengthLimit) {
-    Metadata metadata(path.string());
-    const std::string maxLengthName(255, 'a');
-    const std::string tooLongName(256, 'a');
+    Metadata metadata(rootPath, fileName);
+    const std::string maxLengthName(MAX_FILE_NAME_SIZE, 'a');
+    const std::string tooLongName(MAX_FILE_NAME_SIZE + 1, 'a');
 
     EXPECT_TRUE(metadata.addDocument(maxLengthName));
     EXPECT_TRUE(metadata.containsDocument(maxLengthName));
@@ -125,7 +132,7 @@ TEST_F(MetadataAddDocumentTest, EnforcesNameLengthLimit) {
 }
 
 TEST_F(MetadataAddDocumentTest, AddingSameNameTwiceStoresOneDocument) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
 
     ASSERT_TRUE(metadata.addDocument("users"));
     EXPECT_FALSE(metadata.addDocument("users"));
@@ -134,7 +141,7 @@ TEST_F(MetadataAddDocumentTest, AddingSameNameTwiceStoresOneDocument) {
 using MetadataFlushTest = MetadataTest;
 
 TEST_F(MetadataFlushTest, PersistChangesInDocuments) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
     ASSERT_EQ(std::filesystem::file_size(path), 0u);
     ASSERT_TRUE(metadata.addDocument("users"));
     ASSERT_TRUE(metadata.addDocument("orders"));
@@ -156,7 +163,7 @@ TEST_F(MetadataFlushTest, PersistChangesInDocuments) {
 using MetadataRemoveDocumentTest = MetadataTest;
 
 TEST_F(MetadataRemoveDocumentTest, RemovesExistingDocument) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
     ASSERT_TRUE(metadata.addDocument("users"));
     ASSERT_TRUE(metadata.addDocument("orders"));
 
@@ -167,9 +174,19 @@ TEST_F(MetadataRemoveDocumentTest, RemovesExistingDocument) {
 }
 
 TEST_F(MetadataRemoveDocumentTest, ReturnsFalseForMissingDocument) {
-    Metadata metadata(path.string());
+    Metadata metadata(rootPath, fileName);
     ASSERT_TRUE(metadata.addDocument("users"));
 
     EXPECT_FALSE(metadata.removeDocument("missing"));
     EXPECT_TRUE(metadata.containsDocument("users"));
+}
+
+using MetadataRemoveDocumentTest = MetadataTest;
+
+TEST_F(MetadataTest, GetIndex) {
+    Metadata metadata(rootPath, fileName);
+    ASSERT_TRUE(metadata.addDocument("users"));
+
+    EXPECT_EQ(metadata.getIndex("not_valid"), nullptr);
+    EXPECT_NE(metadata.getIndex("users"), nullptr);
 }

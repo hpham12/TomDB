@@ -9,7 +9,6 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <format>
 
 // ---- InsertOperator ---- //
 void InsertOperator::open() {
@@ -17,14 +16,8 @@ void InsertOperator::open() {
         std::cerr << "Document not exist" << '\n';
         return;
     }
-    // Create BTree instance
-    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
-    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = rootPath + indexFileName;
-    std::string dataFilePath = rootPath + dataFileName;
-
-    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
+    index = metadata->getIndex(document);
 }
 
 bool InsertOperator::next() {
@@ -51,27 +44,14 @@ void SelectOperator::open() {
         std::cerr << "Document not exist" << '\n';
         return;
     }
-    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
-    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
 
-    std::string indexFilePath = rootPath + indexFileName;
-    std::string dataFilePath = rootPath + dataFileName;
-
-    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
+    index = metadata->getIndex(document);
 }
 
 bool SelectOperator::next() {
-    if (!hasNext) {
+    if (!hasNext || index == nullptr) {
         return false;
     }
-
-    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
-    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
-
-    std::string indexFilePath = rootPath + indexFileName;
-    std::string dataFilePath = rootPath + dataFileName;
-
-    index = std::make_unique<BTree<Key>>(indexFilePath, "index", dataFilePath, "data");
 
     auto output = index->get(lookupKey);
 
@@ -119,16 +99,6 @@ bool CreateDocumentOperator::next() {
         return false;
     }
 
-    // Create index and data files
-    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
-    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
-
-    std::string indexFilePath = rootPath + indexFileName;
-    std::string dataFilePath = rootPath + dataFileName;
-
-    std::ofstream createdIndexFile(indexFilePath);
-    std::ofstream createdDataFile(dataFilePath);
-
     if (!metadata->addDocument(document)) {
         return false;
     }
@@ -162,17 +132,7 @@ bool DropDocumentOperator::next() {
         return false;
     }
 
-    // Create index and data files
-    std::string indexFileName = std::format(INDEX_FILE_NAME_TEMPLATE, document);
-    std::string dataFileName = std::format(DATA_FILE_NAME_TEMPLATE, document);
-
-    std::string indexFilePath = rootPath + indexFileName;
-    std::string dataFilePath = rootPath + dataFileName;
-
     metadata->removeDocument(document);
-
-    std::filesystem::remove(indexFilePath);
-    std::filesystem::remove(dataFilePath);
 
     metadata->flush();
 

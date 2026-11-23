@@ -28,12 +28,10 @@ public:
     virtual void close() = 0;
 };
 
-using Key = uint64_t;
-
 class SelectOperator : public Operator {
     Key lookupKey;
     std::unique_ptr<Tuple> currentOutput;
-    std::unique_ptr<BTree<Key> > index;
+    std::shared_ptr<BTree<Key> > index;
     std::string document;
     std::unordered_set<std::string> fieldNames;
     std::shared_ptr<Metadata> metadata;
@@ -57,7 +55,7 @@ public:
     SelectOperator(Key lookupKey, std::string document,
                    std::unordered_set<std::string> fieldNames, bool selectAll,
                    const std::shared_ptr<Metadata> &metadata,
-                   const std::string &rootPath = ROOT_PATH
+                   const std::string &rootPath = DEFAULT_ROOT_PATH
     ) : lookupKey(lookupKey), document(std::move(document)), fieldNames(std::move(fieldNames)), selectAll(selectAll),
         metadata(metadata), rootPath(rootPath) {
     }
@@ -81,8 +79,7 @@ public:
 
     void close() override;
 
-    PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {
-    }
+    explicit PrintOperator(std::unique_ptr<Operator> input) : input(std::move(input)) {}
 
     ~PrintOperator() override = default;
 };
@@ -91,10 +88,9 @@ class InsertOperator : public Operator {
     std::unique_ptr<Tuple> tupleToInsert;
     Key keyToInsert;
     std::string document;
-    std::unique_ptr<BTree<Key> > index;
+    std::shared_ptr<BTree<Key>> index;
     bool inserted = false;
     std::shared_ptr<Metadata> metadata;
-    std::string rootPath;
 
     FRIEND_TEST(QueryProcessorTest, ParseInsertQuery);
 
@@ -109,10 +105,9 @@ public:
 
     InsertOperator(std::unique_ptr<Tuple> tupleToInsert,
                    Key key, std::string document,
-                   const std::shared_ptr<Metadata> &metadata,
-                   const std::string &rootPath = ROOT_PATH)
+                   const std::shared_ptr<Metadata> &metadata)
         : tupleToInsert(std::move(tupleToInsert)), keyToInsert(key),
-          document(std::move(document)), metadata(metadata), rootPath(rootPath) {
+          document(std::move(document)), metadata(metadata) {
     }
 
     [[nodiscard]] bool isIndexValid() const {
@@ -140,7 +135,7 @@ public:
 
     CreateDocumentOperator(std::string document,
                            const std::shared_ptr<Metadata> &metadata,
-                           const std::string &rootPath = ROOT_PATH)
+                           const std::string &rootPath = DEFAULT_ROOT_PATH)
         : document(std::move(document)), metadata(metadata), rootPath(rootPath) {
     }
 
@@ -165,7 +160,7 @@ public:
 
     DropDocumentOperator(std::string document,
                          const std::shared_ptr<Metadata> &metadata,
-                         const std::string &rootPath = ROOT_PATH)
+                         const std::string &rootPath = DEFAULT_ROOT_PATH)
         : document(std::move(document)), metadata(metadata), rootPath(rootPath) {
     };
 

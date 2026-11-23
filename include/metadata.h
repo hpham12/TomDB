@@ -7,15 +7,22 @@
 #include <fstream>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
-inline constexpr std::string_view DEFAULT_METADATA_FILE_PATH = "/.tomdb/metadata";
+#include "index/b_tree.h"
 
 inline constexpr size_t METADATA_SIZE = 8192;
 
 class Metadata {
     std::unordered_set<std::string> documents;
     size_t currentSize = 0;
+    std::unordered_map<std::string, std::shared_ptr<BTree<Key> > > indices;
+    std::string rootPath;
+
+    void initializeIndices();
+
+    void initializeIndex(const std::string &document);
 
 public:
     /**
@@ -30,13 +37,22 @@ public:
 
     bool containsDocument(const std::string &document) const;
 
-    bool addDocument(const std::string& document);
+    bool addDocument(const std::string &document);
 
-    bool removeDocument(const std::string& document);
+    bool removeDocument(const std::string &document);
 
     void flush();
 
-    Metadata(std::string_view metadataFilePath = DEFAULT_METADATA_FILE_PATH);
+    Metadata(std::string_view rootPath = DEFAULT_ROOT_PATH, std::string_view metadataFileName = DEFAULT_METADATA_FILE_NAME);
+
+    std::shared_ptr<BTree<Key> > getIndex(const std::string &document) {
+        if (indices.contains(document)) {
+            return indices[document];
+        }
+
+        std::cerr << "Document " << document << " does not exist" << '\n';
+        return nullptr;
+    }
 };
 
 

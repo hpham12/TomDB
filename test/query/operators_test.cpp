@@ -82,9 +82,11 @@ TEST(SelectOperatorTest, TestE2ELifeCycle) {
 }
 
 TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataPath = metadataRootPath / metadataFileName;
     ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(metadataRootPath).append("/"), metadataFileName);
     metadata->addDocument("document3");
 
     CreateDocumentOperator op{"document3", metadata, "./tmp/"};
@@ -98,17 +100,20 @@ TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
 }
 
 TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
-    ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    const auto document = std::filesystem::path(metadataPath).stem().string();
-    const auto indexPath = "./tmp/" + document + "_tomdb.idx";
-    const auto dataPath = "./tmp/" + document + "_tomdb.dat";
-    std::filesystem::create_directories("./tmp/");
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataFilePath = metadataRootPath / metadataFileName;
+    ASSERT_FALSE(std::filesystem::exists(metadataFilePath));
+    const std::string document = "new_document";
+    const auto indexPath = std::filesystem::temp_directory_path() / (document + "_tomdb.idx");
+    const auto dataPath = std::filesystem::temp_directory_path() / (document + "_tomdb.dat");
+    std::filesystem::create_directories(std::filesystem::temp_directory_path());
     ASSERT_FALSE(std::filesystem::exists(indexPath));
     ASSERT_FALSE(std::filesystem::exists(dataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(std::filesystem::temp_directory_path()).append("/"),
+        metadataFileName);
 
-    CreateDocumentOperator op{document, metadata, "./tmp/"};
+    CreateDocumentOperator op{document, metadata, std::filesystem::temp_directory_path()};
     ASSERT_NO_THROW(op.open());
     ASSERT_TRUE(op.next());
     ASSERT_TRUE(std::filesystem::exists(indexPath));
@@ -118,15 +123,17 @@ TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
     ASSERT_EQ(op.getOutput(), nullptr);
 
     metadata->filestream.close();
-    std::filesystem::remove(metadataPath);
+    std::filesystem::remove(metadataFilePath);
     std::filesystem::remove(indexPath);
     std::filesystem::remove(dataPath);
 }
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataPath = metadataRootPath / metadataFileName;
     ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(metadataRootPath).append("/"), metadataFileName);
 
     DropDocumentOperator op{"document4", metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());
@@ -137,15 +144,18 @@ TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
 }
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
-    ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    const auto document = std::filesystem::path(metadataPath).stem().string();
-    const auto indexPath = "./tmp/" + document + "_tomdb.idx";
-    const auto dataPath = "./tmp/" + document + "_tomdb.dat";
-    std::filesystem::create_directories("./tmp/");
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataFilePath = metadataRootPath / metadataFileName;
+    ASSERT_FALSE(std::filesystem::exists(metadataFilePath));
+    const std::string document = "existing_document";
+    const auto indexPath = std::filesystem::temp_directory_path() / (document + "_tomdb.idx");
+    const auto dataPath = std::filesystem::temp_directory_path() / (document + "_tomdb.dat");
+    std::filesystem::create_directories(std::filesystem::temp_directory_path());
     ASSERT_FALSE(std::filesystem::exists(indexPath));
     ASSERT_FALSE(std::filesystem::exists(dataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(std::filesystem::temp_directory_path()).append("/"),
+        metadataFileName);
     metadata->addDocument(document);
 
     std::ofstream indexFile(indexPath);
@@ -162,7 +172,7 @@ TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
     ASSERT_FALSE(std::filesystem::exists(dataPath));
 
     metadata->filestream.close();
-    std::filesystem::remove(metadataPath);
+    std::filesystem::remove(metadataFilePath);
 }
 
 TEST(PrintOperatorTest, TestGetOutput) {
