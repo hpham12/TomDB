@@ -82,9 +82,11 @@ TEST(SelectOperatorTest, TestE2ELifeCycle) {
 }
 
 TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataPath = metadataRootPath / metadataFileName;
     ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(metadataRootPath).append("/"), metadataFileName);
     metadata->addDocument("document3");
 
     CreateDocumentOperator op{"document3", metadata, "./tmp/"};
@@ -127,9 +129,11 @@ TEST(CreateDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
 }
 
 TEST(DropDocumentOperatorTest, TestE2ELifeCycleWithNonExistingDocument) {
-    const auto metadataPath = generateRandomFilePath();
+    const auto metadataRootPath = std::filesystem::temp_directory_path();
+    const auto metadataFileName = generateRandomFileName();
+    const auto metadataPath = metadataRootPath / metadataFileName;
     ASSERT_FALSE(std::filesystem::exists(metadataPath));
-    auto metadata = std::make_shared<Metadata>(metadataPath);
+    auto metadata = std::make_shared<Metadata>(std::string(metadataRootPath).append("/"), metadataFileName);
 
     DropDocumentOperator op{"document4", metadata, "./tmp/"};
     ASSERT_NO_THROW(op.open());

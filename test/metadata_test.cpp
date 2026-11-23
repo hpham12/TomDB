@@ -14,7 +14,7 @@
 
 class MetadataTest : public testing::Test {
 protected:
-    const std::string rootPath = std::filesystem::temp_directory_path();
+    const std::string rootPath = std::filesystem::temp_directory_path().append("/");
     const std::string fileName = generateRandomFileName();
     const std::filesystem::path path = rootPath + fileName;
 
