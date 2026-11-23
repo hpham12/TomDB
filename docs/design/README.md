@@ -1,39 +1,30 @@
 # TomDB design documents
 
-These documents describe the current implementation of TomDB's completed record, storage, and buffer components. They record behavior, ownership, design tradeoffs, and known implementation limits; completion does not imply guarantees beyond those described here.
+TomDB runs as a single process. The CLI reads one statement per line, and `QueryProcessor` parses and executes it through an operator. A print operator displays matching `SELECT` results. [CLI](../../src/main.cpp) · [Query processor](../../src/query/query_processor.cpp) · [Operators](../../src/query/operators.cpp)
 
-## Suggested reading order
-
-Start with the component map below, then follow the data from values to disk to cached access:
-
-1. [Configuration and identifiers](configuration.md) explains the shared sizes, IDs, and persistent-format assumptions.
-2. [Fields and tuples](records/fields-and-tuples.md) and [pages](records/pages.md) explain how values become page bytes.
-3. [File manager](storage/file-manager.md) and [storage manager](storage/storage-manager.md) explain how pages are persisted and addressed across files.
-4. [Buffer manager](buffer/buffer-manager.md) explains the caller-facing pinning API and page lifecycle.
-5. [Frames and guards](buffer/frames-and-guards.md), [frame locks](buffer/frame-lock-table.md), and [replacement policy](buffer/replacement-policy.md) explain buffer ownership, synchronization, and eviction.
-
-The developing index component has a separate [node serialization format and usage guide](index/node-serialization.md).
-
-For an API usage example, go directly to the [buffer manager](buffer/buffer-manager.md#usage). Each component document links to its implementation and existing tests.
-
-## Component relationships
+## Query path
 
 ```mermaid
 flowchart TD
-    Caller[Caller] --> Guard[PageGuard]
-    Caller --> BM[BufferManager]
-    BM --> Frame[BufferFrame]
-    Guard --> Frame
-    BM --> Locks[FrameLockTable]
-    BM --> Policy[Policy / TwoQPolicy]
+    CLI[tomdb CLI] --> QP[QueryProcessor]
+    QP --> Op[Query operators]
+    Op --> Metadata
+    Metadata --> Catalog[(Document catalog)]
+    Metadata -->|one per document| Tree[B-tree]
+    Op -->|insert and lookup| Tree
+    Tree --> BM[BufferManager]
     BM --> SM[StorageManager]
-    SM --> FM[FileManager per registered file]
-    FM --> Disk[(Page files)]
-    Frame --> Page
-    Page --> Tuple
-    Tuple --> Field
+    SM --> FM[FileManager per file]
+    FM --> Disk[(Index and data pages)]
 ```
 
-A caller registers a file and pins a page through `BufferManager`. The manager loads or reuses a frame and returns a guard. The caller uses an exclusive guard for modifications and marks it dirty. Guard destruction releases the pin; a later eviction writes a dirty frame through the storage and file managers. Explicit flushing is also available.
+`Metadata` loads the document catalog at startup and opens one B-tree per document. `CREATE DOCUMENT` and `REMOVE DOCUMENT` update the catalog and create or remove both files for the document. [Metadata implementation](../../src/metadata.cpp)
 
-The executable in [src/main.cpp](../../src/main.cpp) is a placeholder. Query processing, indexes, transactions, recovery, and distributed execution have no current implementation here and are outside these documents.
+`INSERT` converts a flat JSON object to a tuple, stores it on a data page, and indexes its `id`. B-tree leaves map keys to data page IDs and slot numbers. `SELECT` uses that mapping to retrieve one tuple and project the requested fields. [JSON parser](../../src/query/insert_json.cpp) · [B-tree implementation](../../include/index/b_tree.tpp)
+
+## Component reference
+
+- Shared sizes, identifiers, and file paths. [Configuration](configuration.md)
+- How values become bytes on disk. [Fields and tuples](records/fields-and-tuples.md) · [Slotted pages](records/pages.md) · [Index nodes](index/node-serialization.md)
+- How page I/O is allocated and routed. [File manager](storage/file-manager.md) · [Storage manager](storage/storage-manager.md)
+- How pages are pinned, cached, and evicted. [Buffer manager](buffer/buffer-manager.md) · [Frames and guards](buffer/frames-and-guards.md) · [Frame locks](buffer/frame-lock-table.md) · [Replacement policy](buffer/replacement-policy.md)

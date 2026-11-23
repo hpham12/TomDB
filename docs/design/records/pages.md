@@ -40,10 +40,10 @@ Insertion can reuse a deleted slot when its recorded size is large enough. It re
 
 ## Access and tradeoffs
 
-There is no tuple-fetch method. Current callers interpret the directory through `pageData`, select a live slot, and pass its payload bytes to `Tuple::deserialize`. Public raw bytes make persistence simple, but callers must preserve directory and payload consistency themselves. Slot indices may be reused after deletion; there is no generation identifier.
+`getTuple(index)` returns an independently owned decoded tuple and returns `nullptr` for an empty or out-of-range slot. Callers with direct access through `pageData` must preserve directory and payload consistency. A slot index can refer to a different tuple after reuse.
 
 Metadata is stored inside the same byte buffer as tuples, so a full-page write persists both together. It is an ABI-dependent layout, with no corruption validation or transactional atomicity guarantee. See [configuration](../configuration.md) for capacity and compatibility assumptions.
 
 ## Existing validation
 
-[Page tests](../../../test/records/page_test.cpp) cover insertion and decoding, payload exhaustion, slot exhaustion, deletion, invalid indices, exact page filling, unchanged bytes after failed insertion, and same-size reuse of a deleted slot without altering its neighbor. Arbitrary variable-size reuse sequences and corrupt slot metadata are not covered.
+[Page tests](../../../test/records/page_test.cpp) cover insertion, capacity limits, deletion, same-size slot reuse, and lookup from occupied, empty, and out-of-range slots. They also check that reads return independent copies and that failed insertion preserves page bytes.

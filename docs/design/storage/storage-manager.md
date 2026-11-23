@@ -20,6 +20,8 @@ The split between a registry and single-file managers lets callers address pages
 | `flushPage(PageID, Page&)` | `flush(fileManagerPageId, page)` |
 | `extend(id)` | Add one page |
 | `extend(id, maxPageId)` | Extend through an inclusive page ID |
+| `getAvailablePageId(id)` | Append an initialized page and return its composite `PageID` |
+| `getActivePageId(id)` | Return the last allocated `PageID` or throw `std::out_of_range` for an empty file |
 | `getNumPages(id)` | Read that manager's page count |
 | `getFileManager(id)` | Return a reference to its owning `unique_ptr` |
 
@@ -27,12 +29,12 @@ Every lookup method throws `FileManagerNotRegisteredException` for an unknown ID
 
 ## Ownership and limits
 
-Registry ownership closes file streams when managers are destroyed. Registration is process-local: there is no catalog file, automatic discovery, unregister operation, or persisted ID-to-path mapping. Callers must register files again after restart.
+Registry ownership closes file streams when managers are destroyed. File registrations live in memory. On startup, the [document catalog](../../../src/metadata.cpp) reads document names and opens the corresponding indexes, which register their data and index files again.
 
 IDs are checked for uniqueness, but paths are not canonicalized or deduplicated. Two IDs can open the same physical file with separate streams and page counts. `getFileManager` exposes the owning pointer by reference, so callers can replace or null it and invalidate assumptions made by routing methods.
 
-The registry has no locks. Registration and access require external coordination when used across threads. It adds no transactions, durability guarantees, or I/O error handling beyond the file manager.
+Coordinate registration and registry access across threads. Each file manager serializes its own page I/O.
 
 ## Existing validation
 
-[Storage-manager tests](../../../test/storage/storage_manager_test.cpp) cover multiple registrations, duplicate IDs, page access and flushing, both extension methods, page counts, and missing-manager exceptions. The persistence semantics are exercised further by the [file-manager tests](../../../test/storage/file_manager_test.cpp).
+[Storage-manager tests](../../../test/storage/storage_manager_test.cpp) cover registration, page I/O, extension, allocation, active-page lookup, page counts, and missing-manager exceptions.
