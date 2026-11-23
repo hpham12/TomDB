@@ -1,59 +1,53 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=coverage)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=coverage)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=reliability_rating)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=reliability_rating)
 
-# TomDB
+# <img src="assets/tomdb-logo.png" alt="TomDB" width="600">
 
-TomDB is NoSQL Database designed for performance and flexibility at scale.
+TomDB is a document database designed for performance and flexibility.
+
+The current CLI creates and removes documents, inserts flat JSON records, and looks up records by `id` using a disk-backed B-tree. In TomDB, a *document* is a named collection of records.
+
+## Quickstart
+
+Build TomDB from the repository root with Docker Compose.
+
+```sh
+docker compose up -d
+docker compose exec tomdb cmake -S . -B /tmp/tomdb-build
+docker compose exec tomdb cmake --build /tmp/tomdb-build --parallel
+```
+
+Try the CLI with a fresh database.
+
+```sh
+docker compose exec -T tomdb /tmp/tomdb-build/tomdb <<'EOF'
+CREATE DOCUMENT demo_users
+INSERT INTO demo_users VALUE {"id": 1, "name": "Tom", "age": 30}
+SELECT name, age FROM demo_users WHERE id = 1
+EOF
+```
+
+Expected output is `{name: "Tom", age: 30}`. Replace `name, age` with `*` to return every field. `REMOVE DOCUMENT demo_users` deletes the document and all its records.
+
+## Query and storage limits
+
+- The CLI reads one statement per line until EOF. Keywords are case-insensitive and a trailing semicolon is optional. Document names and named projections are case-sensitive and match `[A-Za-z_][A-Za-z0-9_]*`. Document names have a 50-character limit.
+- `INSERT` accepts one flat JSON object with unique field names and string, signed 32-bit integer, or single-precision floating-point values. The lowercase `id` field must be an integer from `0` to `2147483647`. The serialized record must fit on one data page.
+- `SELECT` supports equality on `id` and returns at most one record. A lookup for an absent ID in an existing document produces no output. With duplicate IDs, the choice of matching record is unspecified.
+- The CLI stores its catalog, index files, and data files under `/.tomdb/`. With the supplied Compose configuration, the files survive CLI restarts and are lost when the container is removed.
 
 ## Documentation
 
-- [Design overview and reading guide](docs/design/README.md): component relationships and a walkthrough of the storage engine.
-- [Development setup](docs/development.md): Docker, CLion, and debugging setup.
+- Build, test, and configure CLion with the [development guide](docs/development.md).
+- Follow a query from the CLI to disk in the [design guide](docs/design/README.md).
 
-The design docs are grouped by [records](docs/design/records/fields-and-tuples.md), [storage](docs/design/storage/storage-manager.md), and [buffer management](docs/design/buffer/buffer-manager.md). They describe current behavior, ownership, tradeoffs, and implementation limits.
+## Technical debt
 
-## High-Level Architecture
+See the full backlog and priorities in [tech-debts.md](docs/tech-debts.md).
 
-The diagram shows the broader architecture direction; the roadmap below distinguishes implemented components from planned work.
+## Roadmap
 
-![High-level architecture](assets/high-level-arch.png)
-
-## Project Roadmap
-### Storage engine
-✅ Page, tuple, field \
-✅ File manager \
-✅ Storage manager \
-✅ Buffer manager \
-✅ B-tree indexing
-
-### Query layer
-✅ Query parser \
-✅ Query planner and execution engine
-
-### Reliability
-⏳ Transactions and concurrency control \
-⏳ Write-ahead logging and crash recovery
-
-### Serving
-⏳ Database server and client protocol
-
-### Distributed architecture
-⏳ Partitioning and data placement \
-⏳ Replication and consensus \
-⏳ Distributed transactions / consistency model \
-⏳ Distributed query execution \
-⏳ Membership, failure detection, and rebalancing
-
-## Technical Debt
-
-### High priority
-
-0. Audit and cleanup vibe-coded slops in node serializer/deserializer and json parser
-1. Find a page with space for a tuple.** Add a mechanism to the [file manager](docs/design/storage/file-manager.md) to locate an existing page where a tuple will fit, rather than always allocating a new page.
-2. Bypass the kernel's page cache.** Investigate direct I/O for the [buffer manager](docs/design/buffer/buffer-manager.md) to avoid caching pages in both the buffer pool and the kernel's page cache. Measure the performance impact and account for platform support and I/O alignment requirements.
-3. Revisit the page pinning logic in [b_tree.tpp](include/index/b_tree.tpp) so exclusive access is honored
-4. Add deletion logic in [b_tree.tpp](include/index/b_tree.tpp)
-5. Add range query logic [b_tree.tpp](include/index/b_tree.tpp)
-6. Add update query logic [b_tree.tpp](include/index/b_tree.tpp)
-7. Refactor serialization/deserialization logic for Field and Tuple (little/big endian)
-8. Audit memory ownership
+- Queries and indexes — record deletion, updates, and range scans.
+- Reliability — transactions, concurrency control, write-ahead logging, and crash recovery.
+- Serving — a database server and client protocol.
+- Distribution — partitioning, replication, consensus, distributed queries and transactions, consistency, membership, failure detection, and rebalancing.

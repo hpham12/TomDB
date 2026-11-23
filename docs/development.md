@@ -1,32 +1,45 @@
 # Development setup
 
-To avoid potential issues with different processor architectures or operating systems, development should be done
-inside the provided Docker container built from Ubuntu 26.04 LTS based image. See https://hub.docker.com/r/hpham99/tomdb
+## Build and test in Docker
 
-This section guides you through setting up your local development setup with CLion.
+The [README quickstart](../README.md#quickstart) builds TomDB in the Compose service. The service uses `hpham99/tomdb:latest` on `linux/amd64` and mounts the checkout at `/workspace`. The quickstart keeps its build directory inside the container. [Compose configuration](../docker-compose.yaml)
 
-First, navigate to the root directory of TomDB, then start the container:
+Run CTest from the repository root after the build completes. Use a disposable database for tests because some fixtures write to `/.tomdb/`.
+
+```sh
+docker compose exec tomdb ctest --test-dir /tmp/tomdb-build --output-on-failure
 ```
-docker compose up -d
+
+## Build outside Docker
+
+Use CMake 3.20 or newer, a C/C++ toolchain with C++20 and `std::format` support, and `clang-tidy` on `PATH`. CMake downloads GoogleTest and nlohmann/json during configuration. [CMake configuration](../CMakeLists.txt)
+
+```sh
+cmake -S . -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build cmake-build-debug --parallel
+ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-## macOS — Apple Silicon
-Go to Settings > Build, Execution, Deployment > Docker, make the following setup:
+Running the CLI and tests that use default metadata requires write access to `/.tomdb/`. The CLI uses that absolute path regardless of its working directory.
 
-   ![step1.png](../assets/local-setup/step1.png)
+## CLion on Apple Silicon
 
-Go to Toolchains, make the following setup:
+Open **Settings → Build, Execution, Deployment**.
 
-   ![step2.png](../assets/local-setup/step2.png)
+1. Add your Docker connection under **Docker**.
 
-Set debugger to **Rosetta GDB**
+   ![Docker connection settings in CLion](../assets/local-setup/step1.png)
 
-   ![step3.png](../assets/local-setup/step3.png)
+2. Add a Docker toolchain using `hpham99/tomdb:latest` and select **Rosetta GDB**.
 
-Setup Valgrind:
+   ![Docker toolchain configured with Rosetta GDB](../assets/local-setup/step2.png)
 
-  ![step4.png](../assets/local-setup/step4.png)
+3. Select the Docker toolchain in a **Debug** CMake profile.
 
-Then, you can run Valgrind using the profiler option
+   ![Debug CMake profile using the Docker toolchain](../assets/local-setup/step3.png)
 
-  ![run-valgrind.png](../assets/local-setup/run-valgrind.png)
+4. To profile with Valgrind, configure it under **Dynamic Analysis Tools** and launch the target with the Valgrind profiler.
+
+   ![Valgrind settings in CLion](../assets/local-setup/step4.png)
+
+   ![Launching the target with the Valgrind profiler](../assets/local-setup/run-valgrind.png)

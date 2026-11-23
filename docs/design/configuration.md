@@ -6,19 +6,23 @@ Source: [include/commons.h](../../include/commons.h).
 
 ## Configuration model
 
-TomDB uses compile-time constants. There is no runtime configuration loader, OS page-size detection, or persisted configuration header. Changing a layout constant requires rebuilding and can make existing files incompatible.
+TomDB fixes page and buffer sizes at compile time. Changing a layout constant requires rebuilding and can make existing files incompatible.
 
-| Constant or type | Current value                          | Meaning |
-| --- |----------------------------------------| --- |
-| `PAGE_SIZE` | 4096 bytes                             | Unit of page allocation and file I/O |
-| `MAX_SLOTS` | 50                                     | Fixed slot directory entries per page |
-| `MAX_CACHED_PAGES` | 15                                     | Buffer frames, pin counters, and lock-table entries |
-| `DATABASE_FILE_NAME` | `tomdb.data`                           | Defined filename constant; managers accept explicit paths |
-| `INDEX_FILE_NAME` | `tomdb.index`                          | Defined filename constant; no implemented index component |
-| `FrameID` | `size_t`                               | Index into the buffer pool |
-| `INVALID_FRAME_ID` | Maximum `size_t`                                  | Unassigned frame marker |
+| Constant or type | Current value | Meaning |
+| --- | --- | --- |
+| `PAGE_SIZE` | 4096 bytes | Unit of page allocation and file I/O |
+| `MAX_SLOTS` | 50 | Fixed slot directory entries per page |
+| `MAX_CACHED_PAGES` | 15 | Buffer frames, pin counters, and lock-table entries |
+| `DEFAULT_ROOT_PATH` | `/.tomdb/` | Default directory in the metadata and query operator APIs |
+| `DEFAULT_METADATA_FILE_NAME` | `metadata` | Default document catalog filename |
+| `DATA_FILE_NAME_TEMPLATE` | `{}_tomdb.dat` | Per-document record filename |
+| `INDEX_FILE_NAME_TEMPLATE` | `{}_tomdb.idx` | Per-document index filename |
+| `MAX_FILE_NAME_SIZE` | 50 bytes | Document name limit enforced by the catalog |
+| `Key` | `uint64_t` | Key type used by document indexes |
+| `FrameID` | `size_t` | Index into the buffer pool |
+| `INVALID_FRAME_ID` | Maximum `size_t` | Unassigned frame marker |
 | `INVALID_VALUE` | Maximum `uint64_t`, stored as `size_t` | Uninitialized slot offset/size and failed insertion marker |
-| `LockMode` | `SHARED`, `EXCLUSIVE`                  | Requested frame access mode |
+| `LockMode` | `SHARED`, `EXCLUSIVE` | Requested frame access mode |
 
 The 4096-byte database page is fixed independently of the host's OS page size. The buffer holds 61,440 bytes of page payload at capacity, plus frame, lock, container, and allocation overhead.
 
@@ -30,8 +34,8 @@ The 4096-byte database page is fixed independently of the host's OS page size. T
 
 ## Persistent format assumptions
 
-Fields and tuples serialize native scalar representations. Pages persist the raw in-memory `Slot` array, including ABI-dependent layout and padding. The current byte-expectation tests assume little-endian, four-byte field enums, integers, and floats; serialization performs no byte-order conversion.
+Fields, tuples, and the document catalog serialize native scalar representations. Record pages persist the raw in-memory `Slot` array, including ABI-dependent layout and padding. The record byte-expectation tests assume little-endian, four-byte field enums, integers, and floats.
 
 The slot directory occupies `sizeof(Slot) * MAX_SLOTS`. For an ABI with a 24-byte `Slot`, that is 1200 bytes, leaving 2896 bytes for tuple payload. This is an ABI-dependent calculation, not an explicitly encoded disk format.
 
-There are no file-format versions, checksums, schema headers, or migration mechanisms. Files should be reused only with compatible layout constants and native representations. See [records](records/fields-and-tuples.md), [pages](records/pages.md), and [file manager](storage/file-manager.md) for the corresponding contracts and limits.
+Reuse record files and the catalog with compatible layout constants and native representations. Index nodes use a versioned little-endian encoding. See [records](records/fields-and-tuples.md), [pages](records/pages.md), and [index node serialization](index/node-serialization.md) for the format details.

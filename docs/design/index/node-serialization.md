@@ -8,6 +8,10 @@ format supports integral keys up to 64 bits, excluding `bool`. Prefer explicit
 key types such as `int32_t` or `uint64_t`. Strings and floating-point keys require
 additional codecs and are rejected at compile time.
 
+[`BTree`](../../../include/index/b_tree.tpp) uses this format to create and reopen
+indexes, split nodes during insertion, and traverse the tree for point lookups.
+Leaf entries point to tuples in a separate data file.
+
 ## Usage
 
 ```cpp
@@ -58,7 +62,7 @@ A leaf adds the next-leaf page ID, then `count` entries, each containing a key,
 record page ID, and `uint64` slot index. An inner node adds `count` keys followed
 by `count + 1` child page IDs, including one child for an empty inner node.
 
-## Validation and remaining work
+## Validation
 
 Serialization rejects invalid levels/counts with `std::invalid_argument` and
 oversized payloads or names longer than 8 bytes with `std::length_error`. Deserialization rejects
@@ -80,14 +84,15 @@ leaf capacity  = (PAGE_SIZE - 63) / (key bytes + 25)
 inner capacity = (PAGE_SIZE - 63) / (key bytes + 17)
 ```
 
-For `int32_t`, these are 139 leaf entries and 192 inner keys (193 children).
-The formulas reserve maximum-length names, so every valid node at capacity fits
-in one serialized page. Shorter names leave spare space rather than increasing
-the capacity. C++ object sizes may exceed `PAGE_SIZE`; only serialized bytes are
-written to disk. Compile-time checks ensure metadata and entries fit and counts
-remain representable as `uint16_t`. Runtime encoding checks remain in place.
+| Key type | Leaf entries | Inner keys | Inner children |
+| --- | ---: | ---: | ---: |
+| `int32_t` | 139 | 192 | 193 |
+| `uint64_t` (document indexes) | 122 | 161 | 162 |
 
-Indexes written with file manager IDs longer than 8 bytes must be rebuilt.
+Capacity reserves space for maximum-length names. Shorter names leave unused
+space. The reader requires this version's encoding and matching key width and
+signedness. Rebuild indexes that use older layouts or longer file-manager IDs.
 
-BTree insertion/loading is still stubbed; this utility does not implement those
-operations or migrate older raw layouts.
+[Serializer tests](../../../test/index/node_serializer_test.cpp) cover format
+round trips, capacity, and input validation. [B-tree tests](../../../test/index/b_tree_test.cpp)
+exercise page splits, lookups, and reopening persisted indexes.

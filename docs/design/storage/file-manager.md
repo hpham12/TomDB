@@ -17,7 +17,7 @@ byte offset = pageId * PAGE_SIZE
 
 ## Construction and lifetime
 
-Construction creates missing parent directories and creates the file if absent. It opens the file for input and output, seeks to its end, and computes `numPages = fileSize / PAGE_SIZE`. If that count is zero, it writes one initialized empty page. Existing valid files retain their contents and page count. Destruction closes the stream.
+Construction creates missing parent directories and opens or creates the file. It computes `numPages = fileSize / PAGE_SIZE` without allocating pages. A new file starts at zero pages. Destruction closes the stream.
 
 Failure to open, filesystem exceptions during setup, or failure to determine file size prints an error and exits the process with status 1. The constructor does not report those failures through exceptions to its caller.
 
@@ -30,9 +30,11 @@ Failure to open, filesystem exceptions during setup, or failure to determine fil
 | `extend()` | Writes one initialized page at the current end and increments the count |
 | `extend(size_t maxPageId)` | Writes initialized pages through the requested inclusive page ID |
 | `getAvailablePageId()` | Appends one initialized page and returns its `size_t` page ID |
+| `getActivePageId()` | Returns the last allocated page ID or throws `std::out_of_range` for an empty file |
 | `getNumPages()` | Returns the in-memory count |
+| `refresh()` | Recomputes the count from the current file length |
 
-An out-of-range load throws `std::out_of_range`; an out-of-range flush prints an error and returns false. A valid-range flush returns true without checking the subsequent stream state. `extend(10)` on a one-page file adds ten pages and results in eleven pages. If the requested ID already exists, extension logs a message and leaves the count unchanged.
+An out-of-range load throws `std::out_of_range`. An out-of-range flush prints an error and returns false. A valid-range flush returns true without checking the subsequent stream state. `extend(10)` on an empty file creates eleven pages. If the requested ID already exists, extension logs a message and leaves the count unchanged.
 
 Loading does not extend a file, and flushing cannot append. Automatic extension when pinning a new page is a [buffer-manager](../buffer/buffer-manager.md) behavior.
 
@@ -40,10 +42,10 @@ Loading does not extend a file, and flushing cannot append. Automatic extension 
 
 Page reads return independent allocations. Modifying a loaded page does not update the file until a flush. Stream flushing transfers buffered output toward the OS but does not call `fsync` or provide a crash-durability guarantee. There is no WAL, checksum, atomic page-write protocol, free-page list, page deletion, or file shrink operation.
 
-Reads, writes, and extensions do not check for short I/O or stream failures. Extension updates `numPages` even if a write fails. File lengths not divisible by `PAGE_SIZE` are not rejected; integer division ignores a trailing partial page, and extension can overwrite that tail. The count is not refreshed for external file changes.
+Reads, writes, and extensions do not check for short I/O or stream failures. Extension updates `numPages` even if a write fails. A trailing partial page is excluded from the count and can be overwritten by extension. Use `refresh()` to pick up external file-length changes.
 
-The stream is opened without `std::ios::binary`; the current Unix environment does not apply text-mode translation, but this is another portability constraint. The manager has no synchronization around its shared seek positions or stream state. Callers must serialize operations on the same manager.
+The stream is opened without `std::ios::binary`, which assumes Unix text-mode behavior. A mutex serializes page I/O and page-count access within a manager. Callers must coordinate `refresh()` and access through separate managers for the same file.
 
 ## Existing validation
 
-[File-manager tests](../../../test/storage/file_manager_test.cpp) cover new and existing files, loading and overwriting pages, bounds failures, both extension methods, initialized appended pages, and reopening a file while preserving an earlier written page. They do not simulate disk failures, torn writes, or malformed file lengths.
+[File-manager tests](../../../test/storage/file_manager_test.cpp) cover empty and existing files, page I/O, bounds failures, extension, active-page lookup, refreshing after external allocation, and reopening a file with its contents preserved.

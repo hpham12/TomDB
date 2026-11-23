@@ -43,9 +43,11 @@ On a cache miss it:
 
 The miss path holds the metadata mutex during extension, I/O, and lock acquisition. Pinning beyond the end allocates every intervening page, including for a shared pin. An unknown file ID raises `FileManagerNotRegisteredException` through the storage manager.
 
+`getAvailablePageId(fileId)` appends one initialized page and returns its `PageID`. `getActivePageId(fileId)` returns the last allocated page and throws `std::out_of_range` for an empty file. `extend(fileId)` appends one page, and `extend(fileId, maxPageId)` extends through the given page number. These calls delegate to storage without pinning pages.
+
 ## Release and dirty tracking
 
-Guard destruction or replacement by move assignment propagates its local dirty flag to the frame and calls private `unpinPage`. Unpinning decrements the counter under the metadata mutex and removes the page from `pinnedPages` at zero. It then releases the metadata mutex and unlocks the frame according to the frame's stored mode. An unlock exception restores the reservation and pinned-set entry. Unpinning a page absent from the pinned set throws `std::logic_error`.
+Guard destruction or replacement by move assignment propagates its local dirty flag to the frame and calls `unpinPage`. Unpinning decrements the counter under the metadata mutex and removes the page from `pinnedPages` at zero. It then releases the metadata mutex and unlocks the frame according to the frame's stored mode. An unlock exception restores the reservation and pinned-set entry. Unpinning a page absent from the pinned set throws `std::logic_error`.
 
 Dirty marking is explicit: mutations through a guard do not automatically mark the page. A shared guard still exposes a mutable page, so callers must use exclusive mode for writes. Repinning a resident dirty page preserves its contents and dirty flag.
 
@@ -57,11 +59,13 @@ For a mapped victim, the manager flushes it if dirty, erases the mapping, resets
 
 Public `flushPage(pageId)` writes the cached page even if clean. It does not clear the dirty flag, acquire the metadata mutex or a frame lock, or check the storage layer's boolean result. It requires a resident page and externally coordinated access: lookup uses `operator[]`, so passing an uncached ID can insert an incorrect mapping instead of reporting a safe error.
 
+`flushUncachedPage(pageId, page)` writes the supplied page directly through storage, bypassing the cache. The write requires an existing page in a registered file.
+
 There is no flush-all operation or destructor writeback. Dirty pages still resident at manager destruction are not automatically persisted. Stream flushes provide no crash-recovery guarantee.
 
 ## Concurrency and failure boundaries
 
-`isPinned` uses a shared metadata lock. Registration, page-count reads, and public flushing do not take that lock; they must not race with conflicting registry or I/O operations. The underlying file streams are not independently synchronized.
+`isPinned` uses a shared metadata lock. Coordinate registry changes and public flushes with conflicting operations. Each file manager serializes its stream I/O with a mutex, and callers must coordinate access to cached page contents.
 
 Unpinning makes a page evictable before releasing its frame lock. Another thread can therefore select and reset that frame during the gap; the implementation does not make eligibility and lock release atomic. Lock mode is recorded on the frame rather than on each guard, making this ordering particularly important. The documentation does not claim that the current pin/lock protocol closes every concurrent eviction race.
 
@@ -70,22 +74,25 @@ The miss path updates policy history before lock acquisition, without undoing th
 ## Usage
 
 ```cpp
-BufferManager manager;
-manager.registerFileManager("data", "tomdb.data");
-const PageID id{"data", 0};
-{
+#include "buffer/buffer_manager.h"
+
+int main() {
+    BufferManager manager;
+    manager.registerFileManager("data", "example_tomdb.dat");
+    const PageID id{"data", 0};
     auto guard = manager.pinPage(id, EXCLUSIVE);
     auto tuple = std::make_unique<Tuple>();
-    tuple->addField(std::make_unique<Field>(42));
-    if (guard->addTuple(std::move(tuple), nullptr) != INVALID_VALUE) {
-        guard.markDirty();
+    tuple->addField(std::make_unique<Field>(42, "value"));
+    if (guard->addTuple(std::move(tuple), nullptr) == INVALID_VALUE) {
+        return 1;
     }
-    manager.flushPage(id); // Explicit write while this example owns access.
-} // Dirty state propagates and the guard releases its pin.
+    guard.markDirty();
+    manager.flushPage(id);
+}
 ```
 
 This example assumes no competing manager operations. The manager must outlive every guard.
 
 ## Existing validation
 
-[Buffer-manager tests](../../../test/buffer/buffer_manager_test.cpp) cover cache hits and misses, automatic extension, shared pins, conflicting-mode timeouts, reservation rollback, guard release and move construction, exhausted capacity, explicit flushing, dirty eviction, frame reuse, and preservation of dirty cached data on repinning. Several failure tests inject internal state; they do not establish complete exception safety or absence of concurrent eviction races.
+[Buffer-manager tests](../../../test/buffer/buffer_manager_test.cpp) cover pinning, frame reuse, dirty eviction, cached and uncached writes, extension and allocation, active-page lookup, lock timeouts, and reservation rollback.
