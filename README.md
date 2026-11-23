@@ -41,11 +41,13 @@ Expected output is `{name: "Tom", age: 30}`. Replace `name, age` with `*` to ret
 - Build, test, and configure CLion with the [development guide](docs/development.md).
 - Follow a query from the CLI to disk in the [design guide](docs/design/README.md).
 
+## Technical debt
+
+See the full backlog and priorities in [tech-debts.md](docs/tech-debts.md).
+
 ## Roadmap
 
 - Queries and indexes — record deletion, updates, and range scans.
 - Reliability — transactions, concurrency control, write-ahead logging, and crash recovery.
 - Serving — a database server and client protocol.
 - Distribution — partitioning, replication, consensus, distributed queries and transactions, consistency, membership, failure detection, and rebalancing.
-
-Engine priorities include free-space reuse beyond the active page, direct I/O evaluation, B-tree page locking, JSON parser and node codec audits, memory ownership, and portable field and tuple encodings.
