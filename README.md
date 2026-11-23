@@ -1,7 +1,7 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=coverage)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=coverage)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=hpham12_TomDB&metric=reliability_rating)](https://sonarcloud.io/component_measures?id=hpham12_TomDB&metric=reliability_rating)
 
-# TomDB
+# <img src="assets/tomdb-logo.png" alt="TomDB" width="600">
 
 TomDB is a document database designed for performance and flexibility.
 
