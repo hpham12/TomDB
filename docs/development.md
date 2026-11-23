@@ -26,7 +26,20 @@ Running the CLI and tests that use default metadata requires write access to `/.
 
 Open **Settings → Build, Execution, Deployment**.
 
-1. Add your Docker connection under **Docker**. [Connection settings](../assets/local-setup/step1.png)
-2. Add a Docker toolchain using `hpham99/tomdb:latest` and select **Rosetta GDB**. [Toolchain settings](../assets/local-setup/step2.png)
-3. Select the Docker toolchain in a **Debug** CMake profile. [CMake profile](../assets/local-setup/step3.png)
-4. To profile with Valgrind, configure it under **Dynamic Analysis Tools** and launch the target with the Valgrind profiler. [Valgrind settings](../assets/local-setup/step4.png) · [Profiler example](../assets/local-setup/run-valgrind.png)
+1. Add your Docker connection under **Docker**.
+
+   ![Docker connection settings in CLion](../assets/local-setup/step1.png)
+
+2. Add a Docker toolchain using `hpham99/tomdb:latest` and select **Rosetta GDB**.
+
+   ![Docker toolchain configured with Rosetta GDB](../assets/local-setup/step2.png)
+
+3. Select the Docker toolchain in a **Debug** CMake profile.
+
+   ![Debug CMake profile using the Docker toolchain](../assets/local-setup/step3.png)
+
+4. To profile with Valgrind, configure it under **Dynamic Analysis Tools** and launch the target with the Valgrind profiler.
+
+   ![Valgrind settings in CLion](../assets/local-setup/step4.png)
+
+   ![Launching the target with the Valgrind profiler](../assets/local-setup/run-valgrind.png)
