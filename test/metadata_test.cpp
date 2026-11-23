@@ -175,3 +175,13 @@ TEST_F(MetadataRemoveDocumentTest, ReturnsFalseForMissingDocument) {
     EXPECT_FALSE(metadata.removeDocument("missing"));
     EXPECT_TRUE(metadata.containsDocument("users"));
 }
+
+using MetadataRemoveDocumentTest = MetadataTest;
+
+TEST_F(MetadataTest, GetIndex) {
+    Metadata metadata(rootPath, fileName);
+    ASSERT_TRUE(metadata.addDocument("users"));
+
+    EXPECT_EQ(metadata.getIndex("not_valid"), nullptr);
+    EXPECT_NE(metadata.getIndex("users"), nullptr);
+}
