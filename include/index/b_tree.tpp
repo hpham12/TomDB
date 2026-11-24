@@ -1,6 +1,7 @@
 //
 // Created by Hieu Pham on 10/4/26.
 //
+#pragma once
 
 #include <cstring>
 
