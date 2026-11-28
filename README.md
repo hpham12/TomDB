@@ -51,3 +51,7 @@ See the full backlog and priorities in [tech-debts.md](docs/tech-debts.md).
 - Reliability — transactions, concurrency control, write-ahead logging, and crash recovery.
 - Serving — a database server and client protocol.
 - Distribution — partitioning, replication, consensus, distributed queries and transactions, consistency, membership, failure detection, and rebalancing.
+
+## Acknowledgments
+
+TomDB was inspired by BuzzDB, an educational database system developed at Georgia Tech for CS 6422 (Database System Implementation). [BuzzDB on GitHub](https://github.com/jarulraj/buzzdb)
